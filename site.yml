@@ -1,0 +1,27 @@
+site:
+  title: "CCLM — Cross-Cluster Live Migration"
+  start_page: modules::index.adoc
+
+asciidoc:
+  attributes:
+    release-version: main
+    page-pagination: true
+
+content:
+  sources:
+    - url: ./
+      start_path: content
+
+ui:
+  bundle:
+    # RHDP showroom theme — a full Antora UI bundle (provides the `default`
+    # layout). Pinned to a stable semver release (not an event tag); the bare
+    # nookbag bundle lacks a default layout and fails the Antora build.
+    url: https://github.com/rhpds/rhdp_showroom_theme/releases/download/v2.0.3/ui-bundle.zip
+    snapshot: true
+
+output:
+  dir: ./www/www
+
+runtime:
+  cache_dir: ./.cache/antora

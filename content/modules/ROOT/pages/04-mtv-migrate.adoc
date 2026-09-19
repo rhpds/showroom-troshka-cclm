@@ -1,0 +1,77 @@
+= MTV Live Migration
+
+Use Migration Toolkit for Virtualization (MTV) to live-migrate a seed VM from
+the *source* cluster to the *destination* cluster.
+
+== Open the MTV UI
+
+. Open the *Source Console* tab.
+. In the left navigation, go to *Migration* → *Plans for virtualization*
+  (MTV plugin). If the plugin is missing, wait for the MTV operator to finish
+  installing, then refresh.
+
+You can also drive the same flow from the *Destination Console*; providers are
+configured cross-cluster on both sides.
+
+== Confirm providers and maps
+
+From the Cluster Terminal (source context):
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get providers.forklift.konveyor.io -A
+oc get networkmaps.forklift.konveyor.io -A
+oc get storagemaps.forklift.konveyor.io -A
+----
+
+Expect:
+
+* An OpenShift provider for the local cluster and a remote provider pointing at
+  destination (and the reverse on the destination cluster).
+* A NetworkMap (typically pod network → pod network).
+* A StorageMap targeting the shared external Ceph RBD storage class
+  (`ocs-external-storagecluster-ceph-rbd` / Troshka equivalent).
+
+== Identify a seed VM
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get vm -n source-cluster
+oc get vmi -n source-cluster
+----
+
+Pick a running VM (for example the seeded demo workload). Note its name and
+namespace.
+
+== Create a migration plan
+
+In the MTV UI on the *source* cluster:
+
+. *Create plan* → select the source provider / namespace / VM(s).
+. Choose the *destination* OpenShift provider and target namespace
+  (`destination-cluster`).
+. Confirm the NetworkMap and StorageMap.
+. Set migration type to *Live* (warm / live — not cold cutover-only).
+. Start the plan.
+
+Watch plan progress in the UI. Disk ownership should transfer via the shared
+Ceph backend; memory/state moves over the migration network.
+
+== Verify on destination
+
+[source,sh,role=execute]
+----
+oc config use-context destination
+oc get vm,vmi -n destination-cluster
+----
+
+The VM should appear `Running` on destination. On source, the original VM/VMI
+should be gone (or stopped, depending on plan settings).
+
+== Optional: ping test during migration
+
+If the seed VM has a guest network, open a console and run a continuous ping
+to a peer while the plan runs — the guest should keep responding across the
+handoff when live migration succeeds.

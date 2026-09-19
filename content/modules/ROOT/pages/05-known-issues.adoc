@@ -1,0 +1,56 @@
+= Known Issues
+
+Quirks observed in the reference RHDP CCLM environment and the Troshka nested
+lab. Check these first when a demo step fails.
+
+== `sync-role=leader` / MetalLB stickiness
+
+`virt-synchronization-controller` elects a leader and expects a stable MetalLB
+service IP on the migration network. If the LoadBalancer IP flaps or the wrong
+pod advertises:
+
+* Confirm the MetalLB `IPAddressPool` covers the intended migration range
+  (source `172.16.100.100`–`.109`, destination `.200`–`.209`).
+* Check that only one sync controller holds `sync-role=leader`.
+* Restarting the non-leader sync pod is usually safe; avoid deleting the
+  MetalLB speaker pods mid-migration.
+
+== Stale VMI after a failed migration
+
+A failed or cancelled MTV live migration can leave a VirtualMachineInstance in
+a stuck state on source or destination:
+
+[source,sh,role=execute]
+----
+oc get vmi -A
+oc describe vmi <name> -n <namespace>
+----
+
+Typical recovery: delete the stale VMI (not necessarily the VM), confirm the
+PVC is still healthy on the shared Ceph StorageClass, then re-start the VM or
+re-create the migration plan.
+
+== Nested NIC name (`enp2s0` vs `enp3s0`)
+
+On Troshka (KubeVirt nested), the migration NIC is typically `enp2s0`. The
+bare-metal RHDP reference often uses `enp3s0`. NNCP / nmstate manifests in this
+lab already target the Troshka layout — do not copy `enp3s0` from older
+production notes without checking:
+
+[source,sh,role=execute]
+----
+oc debug node/<node> -- chroot /host ip -br link
+----
+
+== Shared Ceph / StorageMap not Ready
+
+If MTV StorageMaps stay `NotReady`, verify each nested cluster can reach the
+external mon endpoint and that the ODF external connection secret matches the
+Troshka project Ceph export (`mon-host` on the host network, lab mon on
+`.4:3300` inside the project network).
+
+== Submariner / broker connectivity
+
+Cross-cluster provider discovery and some control-plane paths use Submariner.
+If providers show `ConnectionTestFailed`, check Submariner gateway pods and
+that the broker CA/token on the joining cluster matches the source broker.

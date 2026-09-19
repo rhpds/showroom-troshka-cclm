@@ -1,0 +1,18 @@
+name: modules
+title: CCLM — Cross-Cluster Live Migration
+# Unversioned: showroom/nookbag requests pages without a version segment
+# (/www/modules/index.html), so the component must not add a /<version>/ path.
+version: ~
+nav:
+  - modules/ROOT/nav.adoc
+asciidoc:
+  attributes:
+    page-pagination: true
+    # Resolved at build time; override per-deployment as needed.
+    guid: GUID
+    domain: workshop.local
+    # The Cluster Terminal shell runs as this unprivileged lab user.
+    user: labuser
+    page-links:
+      - url: https://github.com/rhpds/showroom-troshka-cclm/issues/new
+        text: Open an Issue (GitHub)

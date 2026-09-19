@@ -1,0 +1,31 @@
+= CCLM — Cross-Cluster Live Migration
+
+Welcome to the Cross-Cluster Live Migration (CCLM) lab, provisioned by Troshka.
+
+This environment gives you two nested OpenShift clusters that share an external
+Ceph backend and a dedicated migration L2 network. Post-install workloads
+configure OpenShift Virtualization (CNV) for *decentralized live migration*,
+Migration Toolkit for Virtualization (MTV / Forklift), Submariner, and MetalLB
+so you can live-migrate a workload VM from the *source* cluster to the
+*destination* cluster.
+
+== What you have
+
+* *Source cluster* — Single Node OpenShift (SNO) plus two workers
+  (`source.cclm.local`). Seed VMs live here in the `source-cluster` namespace.
+* *Destination cluster* — pure SNO (`dest.cclm.local`). Receives migrated VMs
+  into the `destination-cluster` namespace.
+* *Cluster Terminal* — a shell in the showroom with `oc` and kubeconfigs for
+  *both* clusters (no bastion host).
+* *Source Console* / *Destination Console* — OpenShift web consoles for each
+  cluster (proxy tabs on the right).
+
+== Lab path
+
+. xref:01-environment.adoc[Environment] — topology and networks
+. xref:02-terminal.adoc[Cluster Terminal] — switch contexts between clusters
+. xref:03-verify-sync.adoc[Verify Sync Controllers] — confirm live-migration plumbing
+. xref:04-mtv-migrate.adoc[MTV Live Migration] — migrate a seed VM source → destination
+. xref:05-known-issues.adoc[Known Issues] — quirks to watch for during the demo
+
+Work through the pages using the tabs on the right.

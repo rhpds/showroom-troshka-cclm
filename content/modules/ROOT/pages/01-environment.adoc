@@ -1,0 +1,87 @@
+= Environment
+
+== Clusters
+
+|===
+| Role | Domain | Nodes | Purpose
+
+| Source
+| `source.cclm.local`
+| SNO control plane + 2 workers
+| Runs seed VMs; MTV *source* provider
+
+| Destination
+| `dest.cclm.local`
+| SNO (control plane only)
+| MTV *destination* provider; receives migrations
+|===
+
+API / Ingress VIPs share the machine network (`10.0.0.0/24`):
+
+* Source: `10.0.0.10`
+* Destination: `10.0.0.110`
+
+== Networks
+
+|===
+| Network | CIDR | Attached to | Purpose
+
+| `cluster`
+| `10.0.0.0/24`
+| NIC0 on every node
+| Shared machine network; API / Ingress / DNS
+
+| `migration`
+| `172.16.100.0/24`
+| NIC1 on every node
+| Shared L2 for node + `lm-network` (CNV live migration)
+
+| `bmc`
+| `192.168.100.0/24`
+| BMC (Troshka)
+| Redfish / Agent-based Installer
+|===
+
+=== Migration L2 address plan
+
+|===
+| Address / range | Owner
+
+| `172.16.100.10`
+| source `cp-0`
+
+| `172.16.100.20`–`.21`
+| source workers
+
+| `172.16.100.110`
+| destination `cp-0`
+
+| `172.16.100.100`–`.109`
+| source MetalLB pool (`virt-sync-lb`, …)
+
+| `172.16.100.200`–`.209`
+| destination MetalLB pool
+
+| `172.16.100.224/28`
+| source whereabouts (`lm-network` NAD)
+
+| `172.16.100.240/28`
+| destination whereabouts (`lm-network` NAD)
+|===
+
+== Storage
+
+Both clusters attach to the *same* external Ceph RBD pool (Troshka-provisioned
+project Ceph exported into each nested ODF). MTV StorageMaps target
+`ocs-external-storagecluster-ceph-rbd` so disks move with live migration
+without copying data over the migration network.
+
+== Operators (post-install)
+
+Installed on both clusters by the `demo_workloads` CCLM chain:
+
+* OpenShift Virtualization (CNV) with `decentralizedLiveMigration: true`
+* Migration Toolkit for Virtualization (MTV / Forklift)
+* ODF external mode (shared Ceph)
+* Submariner (broker on source)
+* nmstate, cert-manager, MetalLB

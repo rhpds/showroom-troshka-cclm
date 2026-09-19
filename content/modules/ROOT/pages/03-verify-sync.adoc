@@ -1,0 +1,62 @@
+= Verify Sync Controllers
+
+Decentralized live migration depends on `virt-synchronization-controller`
+pods talking to each other over the *migration* L2 (MetalLB service IPs), and
+on `virt-handler` having a migration-network address via the `lm-network` NAD.
+
+Run these checks from the *Cluster Terminal*.
+
+== HyperConverged live-migration config
+
+On *both* clusters:
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get hyperconverged -n openshift-cnv -o yaml | grep -A20 liveMigrationConfig
+----
+
+Confirm `network: lm-network` (or the configured migration network name) and
+that decentralized live migration is enabled on the HCO.
+
+Repeat with `oc config use-context destination`.
+
+== Sync controller pods
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get pods -n openshift-cnv -l app=virt-synchronization-controller -o wide
+----
+
+[source,sh,role=execute]
+----
+oc config use-context destination
+oc get pods -n openshift-cnv -l app=virt-synchronization-controller -o wide
+----
+
+Pods should be `Running`. Their service endpoints should land in the MetalLB
+migration pools (`172.16.100.100`–`.109` on source, `.200`–`.209` on destination).
+
+== Migration network IPs on virt-handler
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get pods -n openshift-cnv -l kubevirt.io=virt-handler -o wide
+----
+
+Handlers should show secondary addresses from the `lm-network` whereabouts
+ranges (source `.224/28`, destination `.240/28`).
+
+== Cross-cluster reachability (optional)
+
+From a source sync-controller pod, TCP connect to the destination sync
+endpoint on port `9185`. Successful connect means the migration L2 and MetalLB
+advertisement are healthy.
+
+[NOTE]
+====
+If sync pods flap or the LB IP does not stick, see
+xref:05-known-issues.adoc[Known Issues] (`sync-role=leader`).
+====

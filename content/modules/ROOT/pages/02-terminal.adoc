@@ -1,0 +1,46 @@
+= Using the Cluster Terminal
+
+The *OpenShift Cluster Terminal* tab opens a shell inside the showroom as an
+unprivileged lab user (`{user}`). The OpenShift CLI (`oc`) is pre-installed and
+kubeconfigs for *both* clusters are already configured — there is no bastion
+host.
+
+== Confirm access
+
+[source,sh,role=execute]
+----
+oc whoami
+----
+
+== List contexts
+
+[source,sh,role=execute]
+----
+oc config get-contexts
+----
+
+You should see contexts named after each cluster (typically `source` and
+`destination`).
+
+== Switch between clusters
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get nodes -o wide
+----
+
+[source,sh,role=execute]
+----
+oc config use-context destination
+oc get nodes -o wide
+----
+
+Source shows three Ready nodes (SNO + two workers). Destination shows a single
+SNO node.
+
+== Consoles
+
+Use the *Source Console* and *Destination Console* tabs for the OpenShift web
+UIs. Log in with the kubeadmin (or lab) credentials provided in the
+environment.
