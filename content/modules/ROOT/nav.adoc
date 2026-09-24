@@ -1,4 +1,5 @@
 * xref:index.adoc[Overview]
+* xref:glossary.adoc[Acronyms]
 * xref:01-environment.adoc[Environment]
 * xref:02-terminal.adoc[Cluster Terminal]
 * xref:03-verify-sync.adoc[Verify Sync Controllers]

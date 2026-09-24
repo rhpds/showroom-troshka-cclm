@@ -2,7 +2,8 @@
 
 Decentralized live migration depends on `virt-synchronization-controller`
 pods talking to each other over the *migration* L2 (MetalLB service IPs), and
-on `virt-handler` having a migration-network address via the `lm-network` NAD.
+on `virt-handler` having a migration-network address via the `lm-network`
+NetworkAttachmentDefinition (NAD).
 
 Run these checks from the *Cluster Terminal*.
 
@@ -17,7 +18,8 @@ oc get hyperconverged -n openshift-cnv -o yaml | grep -A20 liveMigrationConfig
 ----
 
 Confirm `network: lm-network` (or the configured migration network name) and
-that decentralized live migration is enabled on the HCO.
+that decentralized live migration is enabled on the HyperConverged resource
+(HCO) in `openshift-cnv`.
 
 Repeat with `oc config use-context destination`.
 

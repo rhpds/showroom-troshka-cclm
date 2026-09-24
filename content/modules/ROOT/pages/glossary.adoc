@@ -1,0 +1,38 @@
+= Acronyms
+
+Terms used in this lab. Expanded on first use in each page where practical;
+this list is the lookup if a short form appears alone.
+
+|===
+| Acronym | Meaning
+
+| CCLM
+| Cross-Cluster Live Migration — live-migrating VMs between OpenShift clusters
+
+| CNV
+| Container Native Virtualization — OpenShift Virtualization (KubeVirt-based)
+
+| HCO
+| HyperConverged — the `HyperConverged` custom resource in `openshift-cnv` (managed by the HyperConverged Operator). Live-migration settings live here.
+
+| MTV
+| Migration Toolkit for Virtualization — UI/API for planning VM migrations (built on Forklift)
+
+| Forklift
+| Upstream Konveyor project that powers MTV (providers, maps, plans)
+
+| ODF
+| OpenShift Data Foundation — storage operators; this lab uses *external* mode against shared Ceph
+
+| SNO
+| Single Node OpenShift — one node acting as control plane and worker
+
+| NAD
+| NetworkAttachmentDefinition — Multus secondary network (here: `lm-network` for live migration)
+
+| MCG
+| Multicloud Object Gateway — NooBaa object storage component of ODF (optional in this lab)
+
+| L2
+| Layer-2 network segment — shared broadcast domain (the `migration` network)
+|===

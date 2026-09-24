@@ -28,4 +28,6 @@ so you can live-migrate a workload VM from the *source* cluster to the
 . xref:04-mtv-migrate.adoc[MTV Live Migration] — migrate a seed VM source → destination
 . xref:05-known-issues.adoc[Known Issues] — quirks to watch for during the demo
 
+See xref:glossary.adoc[Acronyms] for short forms used in the guide (HCO, MTV, ODF, …).
+
 Work through the pages using the tabs on the right.

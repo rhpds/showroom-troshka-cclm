@@ -63,7 +63,7 @@ API / Ingress VIPs share the machine network (`10.0.0.0/24`):
 | destination MetalLB pool
 
 | `172.16.100.224/28`
-| source whereabouts (`lm-network` NAD)
+| source whereabouts (`lm-network` NetworkAttachmentDefinition / NAD)
 
 | `172.16.100.240/28`
 | destination whereabouts (`lm-network` NAD)
@@ -72,9 +72,9 @@ API / Ingress VIPs share the machine network (`10.0.0.0/24`):
 == Storage
 
 Both clusters attach to the *same* external Ceph RBD pool (Troshka-provisioned
-project Ceph exported into each nested ODF). MTV StorageMaps target
-`ocs-external-storagecluster-ceph-rbd` so disks move with live migration
-without copying data over the migration network.
+project Ceph exported into each nested OpenShift Data Foundation (ODF) cluster).
+MTV StorageMaps target `ocs-external-storagecluster-ceph-rbd` so disks move with
+live migration without copying data over the migration network.
 
 == Operators (post-install)
 
