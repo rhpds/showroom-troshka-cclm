@@ -1,0 +1,240 @@
+= Hot Plugging Virtual Machine Resources
+
+
+== Introduction
+
+One of the benefits of running workloads on virtual machines is the fact that they are just that, virtual. When you consider the maintenance required to expand resources on a physical server, by upgrading a CPU or adding a few extra DIMMs to increase memory, you realize how advantageous it is to be running in a virtual server environment. The same goes for if you need increased disk drive space, or if you'd like to add an additional network interface. In OpenShift Virtualization each of these tasks can be achieved in a hot-plug manner, that is to say while the machine is running without any adverse affect on the applications running on the VM. In this module we will demonstrate this.
+
+NOTE: Earlier, in xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[Day to Day Operations], you hot-plugged CPU and memory with *Ansible Automation Platform*. This module covers the same ideas from the *OpenShift console*, and also adds hot-plug disk and NIC workflows. Prefer one path per lab run unless you intentionally want to compare console vs automation.
+
+.*Goals*
+
+* Increase the CPU and Memory of a running virtual machine.
+* Add a hotplug virtual disk to a running virtual machine.
+* Add a hotplug network interface (NIC) to a running virtual machine.
+
+
+[[labaccess]]
+== Accessing the OpenShift Cluster
+
+Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
+
+Your console login is available with:
+
+* *User:* {openshift_cluster_admin_username}
+
+* *Password:* {openshift_cluster_admin_password}
+
+
+You can login to your OpenShift cluster on the provided terminal by copying and pasting the following syntax:
+
+[source,sh,role=execute,subs="attributes"]
+----
+oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_password} --server={openshift_api_server_url}
+----
+
+
+[[cpu_mem]]
+== Adding CPU and Memory to a Running VM
+In this part of the lab, we will add additional CPU and Memory resources to a Virtual Machine by changing the Virtual Machine’s Instance Type. To do this, you will start with an existing VM that has a single vCPU and 2 GiB of memory. Using the OpenShift Virtualization console, you will modify the configuration of the VM Instance Type to a type that has 2 vCPU and 4 GiB of memory.
+
+. Lets get started by powering on the *hot-plug-vm-1* virtual machine in the *hot-plug* namespace. Click on *VirtualMachines* then expand the *hot-plug* namespace and click on the VM. Once selected click the *Play* button to *Start* the virtual machine.
++
+image::exercise3/03-image-cpu-000.png[title="Start the VM", link=self, window=blank, width=100%]
+
+. While the VM is booting up make a note of the InstanceType which is *u1.small*, and the current *CPU | Memory* for this VM, which is *1 CPU | 2GiB Memory*
++
+image::exercise3/03-image-cpu-001.png[title="CPU and Memory before hot plug", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select *Details*, if it is not already selected. You can see that the InstanceType is *General Purpose* and also states that the VM has *1 CPU | 2GiB Memory*.
++
+image::exercise3/03-image-cpu-002.png[title="Virtual Machine details", link=self, window=blank, width=100%]
+
+. Click on the blue pencil icon to modify the CPU and Memory resources.
+
+. In the window that appears, click the *Size* drop down and select *2xmedium: 2CPUs, 4Gi Memory*.
++
+image::exercise3/03-image-cpu-003.png[title="Edit Instance Type", link=self, window=blank, width=100%]
+
+. The configuration in the *Details* panel will now show that the virtual machine now has 2 CPUs and 4 GiB of memory.
++
+image::exercise3/03-image-cpu-004.png[title="Virtual Machine details", link=self, window=blank, width=100%]
++
+NOTE: You may notice that the virtual machine live migrates at this stage, this is because it needs to redefine the pod definition to support the new higher resource request, but keeps the VM online during the process.
+
+. Click on the *Console* tab. If necessary, click the blue *Connect* button.
++
+image::exercise3/03-image-cpu-005.png[title="CPU and Memory messages", link=self, window=blank, width=100%]
+
+. Login to the Virtual Machine using *Copy to clipboard* and the *Paste to console* button with the *User name* and *Password* credentials that are provided.
++
+image::exercise3/03-image-cpu-006.png[title="Login to VM", link=self, window=blank, width=100%]
+
+. To validate that the VM now has 2 CPUs and 4GiB of memory, run the following:
++
+.Get the number of processors
+[source,text,role=execute]
+----
+nproc
+----
++
+.Get the amount of memory
+[source,text,role=execute]
+----
+free -m
+----
+
+. You will see that the VM has 2 CPUs and approximately 4 GiB of total memory.
++
+image::exercise3/03-image-cpu-007.png[title="Updated CPU and Memory", link=self, window=blank, width=100%]
++
+NOTE: You may notice that the amount of memory shown is actually less than 4GiB. This is because the VM image has kdump enabled, which reserves some memory for the kernel. If kdump were disabled, the total memory would be 4 GiB.
+
+
+[[add_disk]]
+== Adding a Hotplug Disk to a Running VM
+
+In this portion of the lab, we will hot add a new disk to an existing VM using the OpenShift console. To do this, you will start with an existing running VM that already has one more disks configured, and add an additional one.
+
+. In the left side navigation menu click on *Virtualization*, expand the *hot-plug* namespace, and select the *hot-plug-vm1* virtual machine.
++
+image::exercise3/03-image-disk-001.png[title="hot-plug-vm1 details", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select *Storage*. You can see that the Virtual Machine currently has a single 30GB bootable disk that is using the *Storage class* called *ocs-external-storagecluster-ceph-rbd*.
++
+image::exercise3/03-image-disk-002.png[title="VM has only one disk", link=self, window=blank, width=100%]
+
+. Add an empty disk by clicking the *Add* button under *Disks* and then selecting *Empty disk (blank)*.
++
+image::exercise3/03-image-disk-003.png[title="Add an empty disk", link=self, window=blank, width=100%]
+
+. In the window that appears, give the new disk a name *data-disk-01* and change the size to 5 GiB. The rest of the options may remain at their defaults, and when ready click the *Save* button.
++
+image::exercise3/03-image-disk-004.png[title="Configure the new disk", link=self, window=blank, width=100%]
+
+. You can see that the new disk has been added with a label of *Persistent Hotplug*.
++
+image::exercise3/03-image-disk-005.png[title="The disk is added", link=self, window=blank, width=100%]
+
+. Click on the *Console* tab above and log into the virtual machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window. If necessary, click the blue *Connect* button to restart the console.
+
+. Run the *lsblk* command and you will see the new 5 GiB disk added as */dev/vdc*.
++
+image::exercise3/03-image-disk-007.png[title="View the new disk from the OS", link=self, window=blank, width=100%]
+
+. The new disk is hot-plugged to the virtual machine by way of a new pod that manages access to the disk. The new pod is created in same project as the VM and is called *hp-volume-xxxxx*. This pod runs in addition to the *virt-launcher* pod that we explored in earlier modules.
+
+. To see the pod that is running alongside the virtual machine, return to the embedded terminal and run the following command:
++
+.Get a list of pods
+[source,text,role=execute]
+----
+oc get pods -n hot-plug
+----
++
+.Output
+----
+NAME                                READY   STATUS      RESTARTS   AGE
+NAME                               READY   STATUS      RESTARTS   AGE
+hp-volume-jgxbg                    1/1     Running     0          6m19s
+virt-launcher-hot-plug-vm1-8jlpw   2/2     Running     0          47m
+----
+
+. The *hp-volume* pod will stop if the VM is stopped and the pod will start again when the VM is started. The new disk can be used as any normal disk would be used and will persist even if the VM is stopped and started.
++
+NOTE: While we are not going to do it in this lab, you are perfectly able to create a filesystem on this new disk, mount it, and use it as needed.
+
+[[remove_hotplug]]
+== Remove a Hotplugged Disk
+
+For the next step in this section of the module we will remove the hot-plugged disk from the virtual machine.
+
+. Starting from the *Configuration* tab of the *hot-plug-vm1* virtual machine on the *Storage* sub-tab.
++
+image::exercise3/03-image-disk-010.png[title="Configuration and Storage Page", link=self, window=blank, width=100%]
+
+. Click on the three dots on the right side of the *hot-plugged* disk and select *Detach* from the menu that pops out.
++
+image::exercise3/03-image-disk-011.png[title="Detach the disk", link=self, window=blank, width=100%]
+
+. When prompted, complete the action by clicking on the *Detach* button.
++
+image::exercise3/03-image-disk-012.png[title="Confirm disk detach", link=self, window=blank, width=100%]
+
+. You will see the disk immediately disappear from the *Configuration* screen.
++
+image::exercise3/03-image-disk-013.png[title="Hotplug disk removed", link=self, window=blank, width=100%]
+
+. Return to the *Console* tab and log into the virtual machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window.
+
+
+. Run the *lsblk* command and you will see that the hot-plugged disk is no longer present on the system.
++
+image::exercise3/03-image-disk-014.png[title="Hotplug disk removed", link=self, window=blank, width=100%]
++
+NOTE: The detached disk still exists as a PVC. It can be re-attached, or attached to a different VM, or it can be deleted if it is no longer needed.
+
+. To confirm that the persistent disk still exists on the cluster, click on *Storage -> PersistentVolumeClaims* on the left side navigation menu. You will see the disk still listed in the *hot-plug* namespace alongside the standard boot disk.
++
+image::exercise3/03-image-disk-015.png[title="Disk is removed in OS", link=self, window=blank, width=100%]
+
+
+[[nic]]
+== Adding a NIC to a Running VM
+In this lab, we will add a new *Network Interface Card* (NIC) to an existing VM. To do this, you will start with an existing VM that has a single NIC on the pod network. Using the OpenShift Virtualization console, you will modify the configuration of the VM to include an additional NIC on a new network.
+
+. Click on *Virtualization* in the left side navigation menu, expand the *hot-plug* namespace, and click on the *hot-plug-vm1* virtual machine.
++
+image::exercise3/03-image-nic-001.png[title="Select the hot-plug-vm1", link=self, window=blank, width=100%]
+
+. Make a note of which compute node the VM is currently on, this will be important later.
++
+image::exercise3/03-image-nic-002.png[title="Identify the worker node", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select the *Network* sub-tab, and note that the VM currently has a single NIC named *default* and attached to the *Pod networking* network.
++
+image::exercise3/03-image-nic-003.png[title="Single NIC only", link=self, window=blank, width=100%]
+
+. From this page you can add a new NIC by clicking on the *Add network interface* button.
+
+. In the new window that appears, provide a Name for the new interface, such as *nic-1*. The Model should be *virtio*, and the Network should be *hot-plug/east-west-nad* selected from the drop down menu. When you are ready, click the *Save* button.
++
+image::exercise3/03-image-nic-004.png[title="Add network interface", link=self, window=blank, width=100%]
+
+. What may surprise you since this is a hot-add procedure is that the status of nic-1 says *Pending* and a banner appears that says there are *Pending Changes*.
++
+image::exercise3/03-image-nic-005.png[title="View pending changes", link=self, window=blank, width=100%]
+
+. If you click on the *>* on the banner you can find out why this is the case. Note that the message indicates a *restart or migration* is required for the NIC addition to take effect.
+
+. Just as it was with modifying the CPU and Memory in the earlier section, the virtual machine will perform a live migration so that new resources can be added to the pod.
++
+NOTE: The process may take just a minute or two, but you will notice the *Pending* status and the banner goes away, and*nic-1* is now connected.
++
+image::exercise3/03-image-nic-006.png[title="nic-1 connected", link=self, window=blank, width=100%]
+
+. If you return to the *Overview* tab, you can observe in the *General* area that the VM now resides on a different worker node.
++
+image::exercise3/03-image-nic-007.png[title="Different worker node", link=self, window=blank, width=100%]
+
+. Click on the *Console* tab, and log into the Virtual Machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window.
++
+NOTE: You may see messages on the console when you first view it that show the new NIC being added.
++
+image::exercise3/03-image-nic-008.png[title="Log into VM console", link=self, window=blank, width=100%]
+
+. You can view the new NIC from the operating system by running the command *ip address* on the console.
+
+. The new NIC is listed as *enp3s0* and is recieving an IP address from the 192.168.20.0/24 subnet.
++
+image::exercise3/03-image-nic-009.png[title="New NIC is up", link=self, window=blank, width=100%]
++
+NOTE: It's possible that the newly added network adapter is assigned another name by the OS, e.g. enp2s0, this is perfectly fine.
+
+Congratulations, you have completed this module!
+
+IMPORTANT: At the end of this module be sure to shut down the virtual machine *hot-plug-vm-1* that we were working with in order to conserve lab resources for future modules.
+
+== Summary
+
+In this module we explored how to hotplug resources into a running VM. We demonstrated this by modifying the cpu, memory, storage, and networking configurations of a running virtual machine to show that OpenShift Virtualization is a highly versatile platform capable of meeting the needs of many different customers, with many different use cases.
