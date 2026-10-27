@@ -1,5 +1,5 @@
 name: modules
-title: CCLM — Cross-Cluster Live Migration
+title: Operationalizing OpenShift Virtualization with CCLM
 # Unversioned: showroom/nookbag requests pages without a version segment
 # (/www/modules/index.html), so the component must not add a /<version>/ path.
 version: ~
@@ -8,6 +8,7 @@ nav:
 asciidoc:
   attributes:
     page-pagination: true
+    lab_name: Operationalizing OpenShift Virtualization with CCLM
     # Resolved at build time; override per-deployment as needed.
     guid: GUID
     domain: workshop.local

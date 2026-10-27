@@ -1,0 +1,70 @@
+image::conclusion/00_Thank_You.png[link=self, window=blank, width=100%]
+
+We hope you have enjoyed {lab_name} and learning more about *OpenShift Virtualization*, *Ansible Automation Platform*, and *cross-cluster live migration* (CCLM). Together these capabilities help you manage virtual machines day to day, scale and remediate workloads inside a cluster, and live-migrate running VMs between clusters when you need to.
+
+[[key_takeaways]]
+== Key Takeaways
+
+* OpenShift Virtualization is solution oriented, providing you with a mature, stable, and scalable solution that's easy to get started with.
+
+* OpenShift Virtualization is available at every subscription level of Red Hat OpenShift from OpenShift Platform Plus which provides a full hybrid cloud application development platform, to OpenShift Virtualization Engine, an offering that specializes in providing support for virtualized workloads.
+
+* Ansible Automation Platform is an enterprise tool which provides you with the ability to automate and manage many functions of your virtual machine environment at scale.
+
+* Cross-cluster live migration and MTV let you move running virtual workloads between clusters when capacity, maintenance, or placement requirements demand it.
+
+* OpenShift Virtualization is fully integrated with a broad ecosystem of partner products, with more coming on board each day. Check with your preferred hardware and software vendors to see if they support OpenShift Virtualization.
+
+* OpenShift Virtualization can help you set a strong foundation for traditional workloads, while building skills for the future with a modern application platform.
+
+[[additional_info]]
+== Additional Information
+
+=== Free Ebook: 15 Reasons to Adopt Red Hat OpenShift Virtualization
+
+* Discover how virtualization infrastructure continues to evolve.
+* Explore options for migration of your existing virtual machines.
+* Take advantage of a large number of benefits across your organization.
+* Learn about deploying a consistent foundation for innovation.
+* Learn how to get started through no cost demonstrations or a Virtual Migration Assessment.
+
+Click the link https://www.redhat.com/en/resources/15-reasons-adopt-openshift-virtualization-ebook[here^] for more information.
+
+=== Free Ebook: Red Hat Ansible Automation Platform: A Beginners Guide
+
+* Take a brief look at Ansible Automation Platform.
+* Explore the business value of integrating automation into your organization.
+* Learn about how Ansible Automation Platform works with various partners.
+* Explore strategies for the adoption of automated workflows.
+
+Click the link https://www.redhat.com/en/resources/ansible-automation-platform-beginners-guide-ebook[here^] to read it now.
+
+=== Red Hat Learning Services: DO317 Managing Virtual Machines with Red Hat OpenShift Virtualization
+
+* Skills required to create, access, and manage VMs on OpenShift clusters.
+* Skills required to control usage and access of cpu, memory, storage, and networking resources from VMs using the same Kubernetes features that would also control usage and access to these resources for containers.
+* Sample architectures to manage High Availability (HA) of VMs using standard Kubernetes features and extensions from OpenShift Virtualization.
+* Strategies to connect VMs on OpenShift to data center services outside of their OpenShift cluster, such as storage and databases.
+* Strategies to migrate VMs from compatible hypervisors to OpenShift Virtualization by using the Migration Toolkit for Virtualization operator.
+
+Click the link https://www.redhat.com/en/services/training/managing-virtual-machines-red-hat-openshift-virtualization-exam[here^] for more information.
+
+=== Red Hat Learning Services: AU374 Developing Advanced Automation with Red Hat Ansible Automation Platform
+
+* Leverage capabilities of the automation content navigator to develop Ansible Playbooks.
+* Apply recommended practices for effective and efficient automation with Ansible.
+* Use advanced features of Red Hat Ansible Automation Platform to work with data, including filters and plugins.
+* Perform automation operations as rolling updates.
+* Create automation execution environments to bundle and distribute the dependencies needed to run automation code.
+
+Click the link https://www.redhat.com/en/services/training/au374-developing-advanced-automation-red-hat-ansible-automation-platform[here^] to check it out.
+
+=== Virtualization Migration Assessment
+
+* A two-week onsite interactive workshop and follow-up report.
+* Experienced Red Hat architects run a short series of onsite workshops to help develop your migration journey.
+* They provide an extensive review of your virtualization environment and its current integrations including: networking, storage, security, backup, and disaster recovery.
+* You receive a VMA report with a tailored proposal for your complete migration including high-level recommendations and design considerations.
+* This can help with understanding of where you're going, how you'll get there, how long it will take, and how much it will cost.
+
+Click the link https://www.redhat.com/en/resources/virtualization-migration-assessment-datasheet[here^] for more information.

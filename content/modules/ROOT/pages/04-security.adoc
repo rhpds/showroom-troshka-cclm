@@ -1,0 +1,271 @@
+= Security and Compliance for Virtual Workloads
+
+This module covers host compliance scanning with the OpenShift Compliance Operator,
+network segmentation for virtual machines using NetworkPolicies, and how
+xref:04-security.adoc#rhacs[Red Hat Advanced Cluster Security for Kubernetes (RHACS)]
+extends workload security for OpenShift Virtualization.
+
+.*Goals*
+
+* Configure and run a FedRAMP moderate compliance scan
+* Review failed high-severity compliance checks
+* Apply a NetworkPolicy that denies egress from selected VMs
+* Understand how Red Hat Advanced Cluster Security for Kubernetes (RHACS) fits a virtualization security posture
+
+[[labaccess]]
+== Accessing the OpenShift Cluster
+
+Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
+
+Your console login is available with:
+
+* *User:* {openshift_cluster_admin_username}
+
+* *Password:* {openshift_cluster_admin_password}
+
+You can login to your OpenShift cluster on the provided terminal by copying and pasting the following syntax:
+
+[source,sh,role=execute,subs="attributes"]
+----
+oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_password} --server={openshift_api_server_url}
+----
+
+[[sec_and_comp]]
+== Security and Compliance Using the OpenShift Compliance Operator
+
+This section of our lab will focus on making use of the OpenShift Compliance Operator to configure security scans in your OpenShift cluster. The compliance operator can help ensure that the hosts in your OpenShift environment meet specific security standards, and are deployed to meet those standards.
+
+image::module-01-day-to-day/15a-compliance_overview.png[title="Compliance Overview", link=self, window=blank, width=100%]
+
+. Select *Operators* and then *Installed Operators* from the left side navigation menu, confirm that you have selected *All Projects* and select the *Compliance Operator*.
++
+image::module-01-day-to-day/16-compliance_operator.png[title="Compliance Operator", link=self, window=blank, width=100%]
++
+. This takes you to the *Operator details* page, use the horizontal scrollbar to move across and locate the *ScanSetting* tab.
++
+image::module-01-day-to-day/17-compliance_details.png[title="Compliance Details", link=self, window=blank, width=100%]
++
+. Click the *Create ScanSetting* button.
++
+image::module-01-day-to-day/18-scansetting_button.png[title="Create ScanSetting Button", link=self, window=blank, width=100%]
++
+. On the *Create ScanSetting* page, set the name of the scan to `scan01`.
+Then click the *YAML view* radio button.
++
+image::module-01-day-to-day/19-create_scansetting.png[title="Create Scansetting", link=self, window=blank, width=100%]
++
+. In the ScanSetting YAML details, make note of the following values that are set by default:
+  * The *autoApplyRemediations* field is set to *false*.
+  * The *roles* to be scanned by default include both *worker* and *master* nodes.
+  * The *name* field is set to *scan01* which you entered on the form view.
+. Click the *Create* button to create this simple scansetting definition.
++
+image::module-01-day-to-day/20-scansetting_details.png[title="ScanSetting Details", link=self, window=blank, width=100%]
++
+. Now click on the *Profile* tab where there are a number of pre-defined scanning profiles.
+. In the search box, type `rhcos4` and locate the FedRamp moderate profile *rhcos4-moderate* in the list.
++
+image::module-01-day-to-day/21-profiles_detail.png[title="Profiles Detail", link=self, window=blank, width=100%]
++
+. Click on *rhcos4-moderate* and then on the *YAML*.
+Scroll down the output to browse the rules that are enforced as a part of this scan.
+A quick glimpse at the side panel shows that there are quite a few of them.
++
+image::module-01-day-to-day/22-rhcos4_mod_rules.png[title="RHCOS4-Moderate Rules", link=self, window=blank, width=100%]
++
+. When you are done reviewing the rules, return to the *Operator details* page by clicking your browser's _back button_ twice.
++
+NOTE: Additional details on the profiles available can be found https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/security_and_compliance/compliance-operator#compliance-operator-supported-profiles[here^].
++
+. Next we want to create a *ScanSettingBinding*, pairing a *Profile* with our *ScanSetting* definition we created.
+We do this by navigating to the *Scan Setting Binding* tab, and clicking the *Create ScanSettingBinding* button.
++
+image::module-01-day-to-day/23-create_scansettingbinding.png[title="Create ScanSettingBinding", link=self, window=blank, width=100%]
++
+. In the ScanSettingBinding YAML details, let us make a few changes:
+  * The *metadata/name* value should be set to `fedramp01`
+  * The *settingsRef/name* field is set to `scan01` which we created earlier.
+. Click the *Create* button.
++
+NOTE: The profile is set to rhcos4-moderate (the fedramp moderate profile) by default.
++
+image::module-01-day-to-day/24-scansettingbinding_details.png[title="ScanSettingBinding Details", link=self, window=blank, width=100%]
++
+. After the *ScanSettingBinding* is created, the fedramp01 scan will be run automatically.
+You can view this on the *Compliance Suite* tab.
++
+image::module-01-day-to-day/25-compliance_suite.png[title="Compliance Suite", link=self, window=blank, width=100%]
++
+. This Compliance Suite runs the defined scans against the specified nodes, in our case the masters and the workers defined in *scan01*.
+. You can watch as the scan proceeds through the steps of *RUNNING, AGGREGATING, and DONE* by clicking on the *Compliance Scan* tab.
++
+image::module-01-day-to-day/26-compliance_scan.png[title="Compliance Scan", link=self, window=blank, width=100%]
++
+. Once the scan completes (3-4 minutes on average) you can check your results by clicking on the *ComplianceCheckResult* tab.
++
+. Change the search bar to *Label* and apply the following labels:
+  * `compliance.openshift.io/check-status=FAIL`
+  * `compliance.openshift.io/check-severity=high`
++
+image::module-01-day-to-day/27-compliance_check_results.png[title="Compliance Check Results", link=self, window=blank, width=100%]
++
+. Twelve high severity checks have a failed status:
+
+|===
+| *ComplianceCheckResult* | *Check-Severity* | *Check-Status*
+| rhcos4-moderate-master-configure-crypto-policy| high| FAIL
+| rhcos4-moderate-master-coreos-pti-kernel-argument| high| FAIL
+| rhcos4-moderate-master-disable-ctrlaltdel-burstaction| high| FAIL
+| rhcos4-moderate-master-disable-ctrlaltdel-reboot| high| FAIL
+| rhcos4-moderate-master-enable-fips-mode| high| FAIL
+| rhcos4-moderate-master-no-empty-passwords| high| FAIL
+| rhcos4-moderate-worker-configure-crypto-policy| high| FAIL
+| rhcos4-moderate-worker-coreos-pti-kernel-argument| high| FAIL
+| rhcos4-moderate-worker-disable-ctrlaltdel-burstaction| high| FAIL
+| rhcos4-moderate-worker-disable-ctrlaltdel-reboot| high| FAIL
+| rhcos4-moderate-worker-enable-fips-mode| high| FAIL
+| rhcos4-moderate-worker-no-empty-passwords| high| FAIL
+|===
+
+You have now completed this section on configuring and running compliance scans against your OpenShift cluster.
+
+[[net_policy]]
+== Configure Network Policies to Manage VM Traffic
+
+In Red Hat OpenShift administrators can configure Network Policies to further secure their environments, and the virtual guests that run there.
+In this portion of the lab we are going to configure a virtual machine and then apply a network policy that prevents its egress to the world.
+
+=== Confirm Network Egress on Virtual Machines
+
+. On the left side navigation menu, click on *Virtualization* then click *VirtualMachines*, and select the *rhel9-vm1* virtual machine under the *vms-aap-day2* project in the center column.
++
+image::module-01-day-to-day/28-view_vm.png[title="View VM", link=self, window=blank, width=100%]
++
+. Click on the *Console* tab and use the provided credentials, and the built in copy/paste functionality to authenticate to the VM.
++
+image::module-01-day-to-day/29-login_vm.png[title="Login to VM", link=self, window=blank, width=100%]
++
+NOTE: You may see a popup that asks you to enable the copy/paste functionality. If prompted click *Allow*.
++
+. Once you are logged in, execute the following command to start an outward bound ping to Google:
++
+[source,sh,role=execute]
+----
+ping www.google.com
+----
++
+image::module-01-day-to-day/30-ping_site.png[title="Ping Google", link=self, window=blank, width=100%]
++
+. Press *Control+C* to stop the ping.
++
+. From the left side navigation menu, click on *Workloads* and then *Pods*, and then click on the virt-launcher pod for the one that represents the VM *rhel9-vm1* to view the pod details.
++
+image::module-01-day-to-day/31-select_pod.png[title="Select Pod", link=self, window=blank, width=100%]
++
+NOTE: Pod names are randomly generated, so yours will most likely not match the screenshot above.
++
+. On the *Pod details* page, click the *Edit* option on the *Labels* section.
++
+image::module-01-day-to-day/32-pod_details.png[title="Edit Pod Details", link=self, window=blank, width=100%]
++
+. An *Edit labels* window will appear, you can click into the center box and add a label for `app=network-policy-deny`, press the *Enter* key to commit it, and then click the *Save* button.
++
+image::module-01-day-to-day/33-pod_labels.png[title="Edit Pod Labels", link=self, window=blank, width=100%]
++
+. Repeat the same process for the *rhel9-vm2* virtual machine.
+
+=== Create the Network Policy
+
+. From the left side navigation menu, click on *Networking* and then click on *NetworkPolicies*, then click on the *Create NetworkPolicy* button in the center of the screen.
++
+image::module-01-day-to-day/34-network_policy.png[title="Network Policy", link=self, window=blank, width=100%]
++
+. In *NetworkPolicies* fill out the following fields:
+  * *Policy name*: `ping-egress-deny`
+  * *Key*: `app`
+  * *Value*: `network-policy-deny`
+  * *Deny all egress traffic checkbox*: checked
++
+image::module-01-day-to-day/35-network_policy_configure.png[title="Configure Network Policy", link=self, window=blank, width=100%]
++
+. With the values filled out, you can click the *affected pods* link under the *Pod selector* section to show which pods are affected by this policy.
+Once you are satisfied with your settings you can click the *Create* button.
++
+image::module-01-day-to-day/36-affected_pods.png[title="Affected Pods", link=self, window=blank, width=100%]
++
+. With the policy created, go test it out.
+
+=== Confirm the Effects of the Network Policy on the VM.
+
+. Return to the console of the *rhel9-vm1* virtual machine to test our policy.
+. Using the left side navigation menu, click on *Virtualization*, then *VirtualMachines*, and select *rhel9-vm1* from the center column.
+. Click the *Console* tab of the VM, you should still be logged in from before.
+. Copy and paste the following syntax to test out the new Network Policy:
++
+[source,sh,role=execute]
+----
+ping www.google.com
+----
++
+image::module-01-day-to-day/37-ping_site_deny.png[title="Egress Blocked", link=self, window=blank, width=100%]
++
+. Egress from the cluster is completely blocked, including DNS lookups.
+. Once you have completed this exercise, return to *Networking* and *NetworkPolicies* and delete the *ping-egress-deny* policy using the three-dot menu on the right, and confirming in the popup box.
++
+image::module-01-day-to-day/38-delete_policy.png[title="Delete Policy", link=self, window=blank, width=100%]
+
+In this section we learned how to apply a simple network policy to block egress traffic from a virtual machine to a public website.
+While this is a very simple example and application of this function, network policies are quite feature rich and very tuneable.
+In an advanced example, they can allow you to implement microsegmentation policies helping to shape the traffic flow both inside and outside of your cluster, between virtual guests in different or even the same OpenShift project.
+
+[[rhacs]]
+== Red Hat Advanced Cluster Security for Kubernetes (RHACS)
+
+https://www.redhat.com/en/technologies/cloud-computing/openshift/advanced-cluster-security-kubernetes[Red Hat Advanced Cluster Security for Kubernetes^] (RHACS) is Red Hat's Kubernetes-native application security platform (built on the StackRox project). Where the Compliance Operator focuses on *host and platform* configuration baselines, and NetworkPolicies enforce *network* segmentation for pods and VMs, RHACS adds continuous *workload* security across the cluster lifecycle.
+
+NOTE: RHACS is *not* pre-installed in this Troshka CCLM environment. Treat this section as an orientation for how you would extend the security posture of OpenShift Virtualization with RHACS in a production or dedicated ACS lab.
+
+=== What RHACS provides
+
+* *Visibility* — Discover deployments, images, and network flows; for virtualization environments this includes the `virt-launcher` pods that back running VirtualMachines.
+* *Vulnerability management* — Scan container images (including those used by VM workloads and operators) against known CVEs and prioritize risk.
+* *Compliance* — Evaluate clusters against CIS, NIST, PCI, and other controls, complementary to Compliance Operator node scans.
+* *Network segmentation insights* — Observe allowed and active connections so you can tighten NetworkPolicies with evidence rather than guesswork.
+* *Runtime detection and response* — Alert on process, network, and privilege anomalies in running workloads.
+* *Policy as code* — Enforce admission and runtime policies consistently across one or many clusters (often alongside RHACM for fleet scale).
+
+=== RHACS and OpenShift Virtualization
+
+Virtual machines on OpenShift Virtualization run as pods (`virt-launcher-*`) with attached disks and secondary networks. That means many RHACS controls that apply to containers also apply to the *platform side* of a VM:
+
+|===
+| Concern | Compliance Operator / NetworkPolicy (this lab) | RHACS (typical addition)
+
+| Node / RHCOS hardening
+| ScanSetting + Profile (for example `rhcos4-moderate`)
+| Platform compliance checks and configuration drift
+
+| VM egress / east-west traffic
+| NetworkPolicy on `virt-launcher` labels
+| Network graph, baseline, and policy recommendations
+
+| Image / operator supply chain
+| Not covered here
+| Image scanning and deploy-time policy (block or warn)
+
+| Suspicious runtime behavior
+| Not covered here
+| Process and network runtime alerts on `virt-launcher` and related pods
+|===
+
+Together, Compliance Operator + NetworkPolicies + RHACS give you host baselines, microsegmentation, and continuous workload security for mixed VM and container estates on OpenShift.
+
+=== Explore further (outside this lab)
+
+* Product overview: https://www.redhat.com/en/technologies/cloud-computing/openshift/advanced-cluster-security-kubernetes[Red Hat Advanced Cluster Security for Kubernetes^]
+* Documentation: https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes[RHACS documentation^]
+* Interactive / demo environments: ask your facilitator about an RHACS-enabled showroom if you want hands-on Central UI exercises (risk, violations, network graph).
+
+== Summary
+
+You configured compliance scanning with the Compliance Operator, applied a NetworkPolicy to control VM egress, and reviewed how RHACS extends workload security for OpenShift Virtualization. Continue with xref:04-day-to-day-ansible.adoc[Day to Day Operations] for inventory, observability, and Ansible automation.

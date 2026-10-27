@@ -28,9 +28,9 @@ content/
       index.adoc                      # overview
       01-environment.adoc             # topology / networks
       02-terminal.adoc                # dual-cluster terminal
-      03-verify-sync.adoc             # sync controllers
-      04-mtv-migrate.adoc             # MTV walkthrough
-      05-known-issues.adoc            # production gotchas
+      …                                # day-2 / balancing modules
+      12-verify-sync.adoc             # sync controllers
+      13-cclm-concepts.adoc           # CCLM concepts + MTV migration
 ```
 
 ## Notes

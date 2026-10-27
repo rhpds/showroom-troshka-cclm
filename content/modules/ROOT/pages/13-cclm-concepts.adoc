@@ -1,0 +1,149 @@
+= Cross-Cluster Live Migration (CCLM)
+
+Cross-cluster live migration builds on *decentralized live migration*, an
+advanced form of the storage live migration covered earlier in this lab. It
+lets you move a running *VirtualMachine* between namespaces in one cluster, or
+between remote OpenShift clusters.
+
+This Troshka environment is set up for a real dual-cluster migration: you will
+migrate a seed VM from the *source* cluster to the *destination* cluster with
+Migration Toolkit for Virtualization (MTV). Complete
+xref:12-verify-sync.adoc[Verify Sync Controllers] before the hands-on steps
+below. The interactive Arcade demo at the end is optional context and does not
+replace the MTV exercise.
+
+CCLM is useful when you need to:
+
+* *Balance workloads* — Move VMs from a busy cluster to one with spare capacity.
+* *Facilitate maintenance* — Evacuate VMs from a cluster that needs upgrades or
+  shutdown without interrupting services.
+* *Expedite restores* — Restore to a temporary location, then migrate VMs back
+  to their original namespace and storage with less downtime.
+
+[[how_cclm]]
+== How does it work?
+
+The migration involves two *VirtualMachineInstances* and two
+*VirtualMachineInstanceMigration* objects. Like a storage live migration, disk
+contents are coordinated with the receiving *VirtualMachine*. The key difference
+is that the receiving VM has a completely separate *VirtualMachineInstance*. A
+dedicated synchronization controller in the `openshift-cnv` namespace keeps
+source and target *VirtualMachineInstance* status in sync so the guest can
+finish migrating.
+
+In this lab MTV drives that flow across clusters: providers, network maps, and
+storage maps point at the shared Ceph backend and the migration L2 network so
+disk ownership can transfer without copying data over the migration path.
+
+[[prereqs]]
+== Prerequisites
+
+Unlike in-cluster live migration, CCLM needs a few extra pieces (already
+configured on Troshka):
+
+* Migration Toolkit for Virtualization (MTV) with
+  `feature_ocp_live_migration` enabled on the *ForkliftController*.
+* The `decentralizedLiveMigration` feature gate enabled on the *HyperConverged*
+  custom resource (both clusters).
+* Shared external storage (Ceph RBD via ODF), Submariner, MetalLB, and the
+  migration L2 / `lm-network` NAD — confirm these in
+  xref:12-verify-sync.adoc[Verify Sync Controllers].
+
+[[mtv_ui]]
+== Open the MTV UI
+
+. Open the *Source Console* tab.
+. In the left navigation, go to *Migration* → *Plans for virtualization*
+  (MTV plugin). If the plugin is missing, wait for the MTV operator to finish
+  installing, then refresh.
+
+You can also drive the same flow from the *Destination Console*; providers are
+configured cross-cluster on both sides.
+
+[[mtv_providers]]
+== Confirm providers and maps
+
+From the Cluster Terminal (source context):
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get providers.forklift.konveyor.io -A
+oc get networkmaps.forklift.konveyor.io -A
+oc get storagemaps.forklift.konveyor.io -A
+----
+
+Expect:
+
+* An OpenShift provider for the local cluster and a remote provider pointing at
+  destination (and the reverse on the destination cluster).
+* A NetworkMap (typically pod network → pod network).
+* A StorageMap targeting the shared external Ceph RBD storage class
+  (`ocs-external-storagecluster-ceph-rbd` / Troshka equivalent).
+
+[[mtv_seed_vm]]
+== Identify a seed VM
+
+[source,sh,role=execute]
+----
+oc config use-context source
+oc get vm -n source-cluster
+oc get vmi -n source-cluster
+----
+
+Pick a running VM (for example the seeded demo workload). Note its name and
+namespace.
+
+[[mtv_plan]]
+== Create a migration plan
+
+In the MTV UI on the *source* cluster:
+
+. *Create plan* → select the source provider / namespace / VM(s).
+. Choose the *destination* OpenShift provider and target namespace
+  (`destination-cluster`).
+. Confirm the NetworkMap and StorageMap.
+. Set migration type to *Live* (warm / live — not cold cutover-only).
+. Start the plan.
+
+Watch plan progress in the UI. Disk ownership should transfer via the shared
+Ceph backend; memory and guest state move over the migration network.
+
+[[mtv_verify]]
+== Verify on destination
+
+[source,sh,role=execute]
+----
+oc config use-context destination
+oc get vm,vmi -n destination-cluster
+----
+
+The VM should appear `Running` on destination. On source, the original VM/VMI
+should be gone (or stopped, depending on plan settings).
+
+[[mtv_ping]]
+== Optional: ping test during migration
+
+If the seed VM has a guest network, open a console and run a continuous ping
+to a peer while the plan runs — the guest should keep responding across the
+handoff when live migration succeeds.
+
+[[cclm_arcade]]
+== Interactive Demo (optional)
+
+After you complete the MTV migration above, you can optionally click through
+this Arcade demo for a related RHACM fleet-management walkthrough. The embedded
+demo shows a cross-cluster live migration between two remote OpenShift
+Virtualization clusters managed by Red Hat Advanced Cluster Management for
+Kubernetes.
+
+++++
+<!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(52.9167% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/kCWUcu3QY39Hfa1lNpRu?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" title="Whats New in OpenShift 4.21: Cross-cluster Live Migration" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
+++++
+
+== Summary
+
+You reviewed how decentralized / cross-cluster live migration works, then used
+MTV to live-migrate a VM from *source* to *destination* on Troshka. If a step
+fails, see xref:15-known-issues.adoc[Known Issues], or revisit
+xref:12-verify-sync.adoc[Verify Sync Controllers].
