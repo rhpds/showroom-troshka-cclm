@@ -1,0 +1,191 @@
+= Live Migration of Workloads
+
+== Introduction
+
+Live migration of workloads between compute nodes and storage types is a crucial feature expected of any modern hypervisor. OpenShift Virtualization allows for the simple and easy process of migrating your virtual machine workloads between nodes and storageclasses in the cluster as determined by either the Kubernetes scheduler, or you the end user.
+
+In a container-based application there are often multiple replicas of a container spread across the cluster ensuring availability, and should a hosting node run out of resources, a container is simply killed and redeployed elsewhere in the cluster. The same does not apply to virtual machines which are stateful workloads with persistent storage. Thus virtual workloads may need to be live migrated for reasons related to physical resource limitations, planned maintenance, or to enhance performance of particular workload.
+
+
+.*Goals*
+
+* Live migration of a virtual machine from one node to another random node.
+* Live migration of a virtual machine from one node to another specific node.
+* Live migration of virtual machine storage from one StorageClass to another.
+
+== Prerequisites
+
+* The underlying PVC must use *ReadWriteMany (RWX)* access mode
+
+* The pod network must not be configured with the bridge binding type.
+
+* Ports *49152 and 49153* must be available in the VM's virt-launcher pod; live migration fails if these ports are specified in a masquerade network interface.
+
+* CPU model must match on the source and destination compute node - you can not live migrate virtual guests from Intel to AMD, ARM, or PowerPC processor types, even though they are all supported by OpenShift Virtualization and mixed clusters can exist.
+
+
+[[labaccess]]
+== Accessing the OpenShift Cluster
+
+Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
+
+Your console login is available with:
+
+* *User:* {openshift_cluster_admin_username}
+
+* *Password:* {openshift_cluster_admin_password}
+
+
+You can login to your OpenShift cluster on the provided terminal by copying and pasting the following syntax:
+
+[source,sh,role=execute,subs="attributes"]
+----
+oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_password} --server={openshift_api_server_url}
+----
+
+
+[[compute_rand]]
+== Compute Migration to a random node
+During maintenance or troubleshooting, you might need to migrate a VM to a different node. Live migration is the process of moving a running Virtual Machine Instance (VMI) to a different node without disruption.
+
+In this lab, you will be performing a live migration of Virtual Machine from one compute node to another. To do this, you will access a running VM, determine its current node, and then migrate it to another node.
+
+. From the left side panel, click on *VirtualMachines*. In the central virtual machine overview column, select the *live-migrate* project and click on the Virtual Machine named *live-migrate-vm1*.
++
+image::exercise1/01-vm-start-000.png[title="Select the Virtual Machine", link=self, window=blank, width=100%]
+
+. If the virtual machine is currently powered of click the blue *Play* button to *Start* the Virtual Machine.
++
+image::exercise1/01-vm-start-001.png[title="Start the Virtual Machine", link=self, window=blank, width=100%]
+
+. The Virtual Machine will schedule, start and move into the *Running* state as seen below.
++
+image::exercise1/01-vm-start-002.png[title="Running Virtual Machine", link=self, window=blank, width=100%]
+
+. To see the node the Virtual Machine is currently running on, look at the *General* box on the right hand side of the *VirtualMachine details* page for the *Node* name. In the following screenshot, the node is *worker-cluster-bj7mh-1*.
++
+image::exercise1/01-image-compute-002.png[title="Virtual machine details", link=self, window=blank, width=100%]
+
+. To migrate the Virtual Machine to another node, click on the *Actions* menu, hover over *Migration*, and then click *Compute*.
++
+image::exercise1/01-image-compute-003.png[title="Initiate migration", link=self, window=blank, width=100%]
+
+. The default selection is *Automatically selected Node* which allows the Kubernetes scheduler to decided the best placement for the virtual guest. Click the *Migrate VirtualMachine* button.
++
+image::exercise1/01-image-compute-004.png[title="Configure migration", link=self, window=blank, width=100%]
+
+. Wait a few moments and the virtual nachine status will change from *Running* to *Migrating*.
++
+image::exercise1/01-image-compute-006.png[title="VM is migrating", link=self, window=blank, width=100%]
+
+. The live migration will complete and the virtual machine will return to a *Running* state on a different worker node. In the following screenshot, the node is *worker-cluster-bj7mh-2*.
++
+image::exercise1/01-image-compute-007.png[title="VM is running", link=self, window=blank, width=100%]
+
+. The VM has live migrated to a new worker node while still running.
+
+[[compute_spec]]
+== Compute Migration to a specific node
+
+During maintenance or troubleshooting, you may need to choose the destination of a virtual guest during the live migration process. The process here is quite similar to the last exercise, there are just a few additional steps that allow for you to live migrate a Virtual Machine to a *specific* node in the cluster.
+
+. The Virtual Machine should already be *Running* from the last lesson. If it is not, click the blue *Play* button to *Start* the Virtual Machine and wait for it to enter the *Running* state.
++
+image::exercise1/01-image-compute-010.png[title="Virtual machine details", link=self, window=blank, width=100%]
+
+. To migrate the Virtual Machine to another node, click on the *Actions* menu, hover over *Migration*, and then click *Compute*.
++
+image::exercise1/01-image-compute-011.png[title="Initiate migration", link=self, window=blank, width=100%]
+
+. You will be presented with the *Migrate VirtualMachine to a different Node* window.
+. Select the *Specific Node* option, which will then display the list of available nodes. Select the check the box next to the other worker node and click the *Migrate VirtualMachine* button.
++
+image::exercise1/01-image-compute-012.png[title="Configure migration", link=self, window=blank, width=100%]
+
+. You will see the Virtual Machine status changes from *Running* to *Migrating*.
++
+image::exercise1/01-image-compute-013.png[title="VM is migrating", link=self, window=blank, width=100%]
+
+. Once the migration completes, the virtual machine status will return to a *Running* state, and the VM will now reside on the chosen destination node.
++
+image::exercise1/01-image-compute-014.png[title="VM is running", link=self, window=blank, width=100%]
+
+[[storage_mig]]
+== Storage Migration
+Storage environments often have their own lifecycles, maintenance schedules, and performance profiles. It may become necessary to migrate virtual workloads to a new storage class should the backing storage system need to undergo maintenance window or be replaced entirely. Likewise, many customers create custom storage classes based on tiers of performance. A virtual machine running a database that needs to be highly responsive may map to a storageclass provided by an all-flash system, while a simple virtual webserver may find itself attached to a storageclass from a traditional spinning disk array. A customer may also find their demands changing and the ability to live migrate the VMs helps to reduce downtime. For all these case, OpenShift Virtualization allows the migration of PVCs from one StorageClass to another while the virtual machine is running.
+
+
+. Let's begin by taking a look at the storage on our *live-migrate-vm1* virtual machine.
+. Click on the *Configuration* tab and select *Storage*. You can see that the Virtual Machine currently has a single 30GB bootable disk that is using the storage class called *ocs-external-storagecluster-ceph-rbd*.
++
+image::exercise1/01-image-storage-002.png[title="View storage details", link=self, window=blank, width=100%]
+
+. The storage live migration task can often take a bit longer than the compute live migration so we are going to add an additional test to confirm that the virtual machine operation is unaffected during the process.
+. Click on the *Console* tab and login to the virtual machine using the provided credentials, and the *Copy to clipboard* and *Paste to console* buttons.
++
+image::exercise1/01-image-storage-001.png[title="Log into virtual console", link=self, window=blank, width=100%]
++
+NOTE: You may need to click on a browser pop-up to allow this action to take place.
+
+
+. Now lets run a command that will run continuously through the migration process, to demonstrate that the VM does not go offline perhaps the `ping` command to a publicly available website like www.google.com. You can use the provided toolbox below to copy the command, and paste it using the *Paste to console* button as in the previous step.
++
+[source,sh,role=execute]
+----
+ping www.google.com
+----
++
+image::exercise1/01-image-storage-003.png[title="Run command on console", link=self, window=blank, width=100%]
+
+. Now click on the *Actions* menu, hover over the *Migration* option and click on the option for *Storage*.
++
+image::exercise1/01-image-storage-004.png[title="Initiate storage migration", link=self, window=blank, width=100%]
+
+. In the *Migrate VirtualMachine storage* window, review the options, keep the defaults and click the *Next* button.
++
+image::exercise1/01-image-storage-005.png[title="Migration details", link=self, window=blank, width=100%]
+
+. For the *Destination StorageClass*, select the new *StorageClass* called *custom-storage-class* and click *Next*.
++
+image::exercise1/01-image-storage-006.png[title="Select destination StorageClass", link=self, window=blank, width=100%]
+
+. Review the final storage migration configuration and click *Migrate VirtualMachine storage*.
++
+image::exercise1/01-image-storage-007.png[title="Review migration details", link=self, window=blank, width=100%]
+
+. The next window will show you the status of the storage migration. It is safe to close the window by clicking the *X* in the top corner, or you may click on the link to *View storage migrations*. Do not click the *Stop* button.
++
+image::exercise1/01-image-storage-008.png[title="Migration has started", link=self, window=blank, width=100%]
++
+NOTE: Because this is a lab environment, and with the number of concurrent users here at Red Hat Summit, the migration process may take longer than it would in a production environment. Please be patient as this process completes.
+
+. To view the storage migration status, click on *Overview* on the left side navigation menu, and select the *Migrations* tab. You will see the current migration listed, along with a progress bar, and other informational graphs such as bandwidth consumption.
++
+image::exercise1/01-image-storage-009.png[title="Migration is running", link=self, window=blank, width=100%]
+
+. Once the migration is complete it will disappear from the *Overview -> Migrations* page.
++
+image::exercise1/01-image-storage-109.png[title="Migration is complete", link=self, window=blank, width=100%]
+
+. Using the left side navigation menu select the *live-migrate* namespace and click on the Virtual Machine named *live-migrate-vm1*.
++
+image::exercise1/01-image-storage-209.png[title="Select live-migrate-vm1", link=self, window=blank, width=100%]
++
+NOTE: You should still be able to see the `ping` command running in the embedded console.
+
+. Click on the *Configuration* tab and select *Storage*. You can see that the name of the *Source* has changed and the *Storage class* is now *custom-storage-class*, which is what you selected for the storage migration.
++
+image::exercise1/01-image-storage-010.png[title="VM has been migrated", link=self, window=blank, width=100%]
+
+. Now return to the *Console* tab, you will see that your ping is still running, stop the command with `Ctrl+c` to confirm that it ran continuously throughout the extended live migration process, and that no pings were dropped.
++
+image::exercise1/01-image-storage-011.png[title="No interruption during storage migration", link=self, window=blank, width=100%]
+
+Congratulations, you have completed this module!
+
+IMPORTANT: Prior to moving on to the next section, please shut down the *live-migrate-vm1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
+
+
+== Summary
+
+In this module we explored how we are able to migrate virtual machines between nodes in our cluster while they are still running. This live migration feature allows you to let OpenShift automate the selection of the destination node based on free resources, or allows you as the administrator to select the node to where the VM migrates. We also explored the storage live migration feature which migrates a virtual machine's disk from one storage class to another while the machine continues to operate

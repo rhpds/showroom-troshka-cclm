@@ -5,7 +5,9 @@ pods talking to each other over the *migration* L2 (MetalLB service IPs), and
 on `virt-handler` having a migration-network address via the `lm-network`
 NetworkAttachmentDefinition (NAD).
 
-Run these checks from the *Cluster Terminal*.
+Run these checks from the *Cluster Terminal*. When verification looks good,
+continue to xref:13-cclm-concepts.adoc[Cross-Cluster Live Migration] for
+concepts and the MTV hands-on migration.
 
 == HyperConverged live-migration config
 

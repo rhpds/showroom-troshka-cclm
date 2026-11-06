@@ -35,4 +35,10 @@ this list is the lookup if a short form appears alone.
 
 | L2
 | Layer-2 network segment — shared broadcast domain (the `migration` network)
+
+| RHACS
+| Red Hat Advanced Cluster Security for Kubernetes — Kubernetes-native workload security (StackRox-based)
+
+| RHACM
+| Red Hat Advanced Cluster Management for Kubernetes — multi-cluster fleet management
 |===

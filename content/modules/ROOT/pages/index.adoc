@@ -1,6 +1,15 @@
-= CCLM — Cross-Cluster Live Migration
+= Operationalizing OpenShift Virtualization with CCLM
 
-Welcome to the Cross-Cluster Live Migration (CCLM) lab, provisioned by Troshka.
+Welcome to this lab, provisioned by Troshka. You will practice day-to-day
+virtual machine operations on OpenShift Virtualization, scale and place
+workloads inside a cluster, then finish with *cross-cluster live migration*
+(CCLM) between two nested OpenShift clusters.
+
+OpenShift Virtualization enables you to bring virtual machines onto a modern,
+Kubernetes-based infrastructure. It enables the development and delivery of new
+applications as well as the modernization of existing ones and can create
+applications that consist of virtual machines, containers, and serverless
+functions — all managed together using Kubernetes-native tools and paradigms.
 
 This environment gives you two nested OpenShift clusters that share an external
 Ceph backend and a dedicated migration L2 network. Post-install workloads
@@ -24,9 +33,21 @@ so you can live-migrate a workload VM from the *source* cluster to the
 
 . xref:01-environment.adoc[Environment] — topology and networks
 . xref:02-terminal.adoc[Cluster Terminal] — switch contexts between clusters
-. xref:03-verify-sync.adoc[Verify Sync Controllers] — confirm live-migration plumbing
-. xref:04-mtv-migrate.adoc[MTV Live Migration] — migrate a seed VM source → destination
-. xref:05-known-issues.adoc[Known Issues] — quirks to watch for during the demo
+. xref:03-vm-basics.adoc[OpenShift Virtualization Fundamentals] — create and manage a VM
+. xref:04-security.adoc[Security and Compliance] — Compliance Operator and NetworkPolicies
+. xref:04-day-to-day-ansible.adoc[Day to Day Operations] — inventory, observability, AAP automation
+. xref:05-live-migration.adoc[Live Migration] — compute and storage migration in-cluster
+. xref:06-resource-management.adoc[Resource Management] — CPU and memory overcommit
+. xref:07-real-world-scaling.adoc[Real World Scaling] — apply scaling under load
+. xref:08-hot-plug.adoc[Hot-Plug] — console hot-plug of CPU, memory, disk, and NIC
+. xref:09-affinity.adoc[Affinity] — node and pod affinity / anti-affinity
+. xref:10-descheduler.adoc[Dynamic Rescheduling] — descheduler-driven rebalance
+. xref:11-fencing.adoc[Fencing] — node health check and failure remediation
+. xref:12-verify-sync.adoc[Verify Sync Controllers] — confirm CCLM plumbing
+. xref:13-cclm-concepts.adoc[Cross-Cluster Live Migration] — concepts and MTV migrate source → destination
+. xref:15-known-issues.adoc[Known Issues] — quirks to watch for during the demo
+. xref:16-scale-to-the-moon.adoc[Scale to the Moon] — discussion scenarios
+. xref:conclusion.adoc[Conclusion]
 
 See xref:glossary.adoc[Acronyms] for short forms used in the guide (HCO, MTV, ODF, …).
 
