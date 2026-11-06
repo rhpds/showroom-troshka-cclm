@@ -2,7 +2,7 @@
 
 This module covers host compliance scanning with the OpenShift Compliance Operator,
 network segmentation for virtual machines using NetworkPolicies, and how
-xref:04-security.adoc#rhacs[Red Hat Advanced Cluster Security for Kubernetes (RHACS)]
+<<rhacs,Red Hat Advanced Cluster Security for Kubernetes (RHACS)>>
 extends workload security for OpenShift Virtualization.
 
 .*Goals*
@@ -266,6 +266,227 @@ Together, Compliance Operator + NetworkPolicies + RHACS give you host baselines,
 * Documentation: https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes[RHACS documentation^]
 * Interactive / demo environments: ask your facilitator about an RHACS-enabled showroom if you want hands-on Central UI exercises (risk, violations, network graph).
 
+[[advanced_cluster_security]]
+== Advanced Cluster Security with RHACM and RHACS
+
+In multi-cluster environments using Red Hat Advanced Cluster Management (RHACM),
+security and compliance must scale across many OpenShift instances. This section
+covers how to govern security policy, audit, and remediation at fleet scale.
+
+=== Multi-cluster security governance
+
+RHACM extends security by adding *declarative policy enforcement* across all
+managed clusters:
+
+* *Compliance policies* — Define a desired security state once, apply uniformly
+  to all clusters, and get alerts when drift is detected.
+* *Network policies as code* — Version control and roll out NetworkPolicy rules
+  across a fleet using GitOps or RHACM PlacementBindings.
+* *RBAC and admission control* — Centrally govern who can create or modify
+  VirtualMachines and other sensitive objects across clusters.
+* *Audit logging* — Aggregate cluster audit logs to a central point for
+  forensics and compliance reporting.
+
+Example RHACM security policy (applied to all clusters with label `vm-workload: true`):
+
+[source,yaml]
+----
+apiVersion: policy.open-cluster-management.io/v1
+kind: ConfigurationPolicy
+metadata:
+  name: require-resource-quotas-vm-namespaces
+spec:
+  remediationAction: enforce
+  severity: high
+  object-templates:
+  - complianceType: must have
+    objectDefinition:
+      apiVersion: v1
+      kind: ResourceQuota
+      metadata:
+        name: vm-namespace-quota
+        namespace: source-cluster
+      spec:
+        hard:
+          requests.memory: "1000Gi"
+          requests.cpu: "500"
+          limits.memory: "2000Gi"
+          limits.cpu: "1000"
+  - complianceType: must have
+    objectDefinition:
+      apiVersion: v1
+      kind: ResourceQuota
+      metadata:
+        name: vm-namespace-quota
+        namespace: destination-cluster
+      spec:
+        hard:
+          requests.memory: "1000Gi"
+          requests.cpu: "500"
+          limits.memory: "2000Gi"
+          limits.cpu: "1000"
+----
+
+Place this policy on clusters with a *PlacementBinding*:
+
+[source,yaml]
+----
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: vm-resource-quota-placement
+spec:
+  placementRef:
+    name: clusters-with-vm-workloads
+    kind: PlacementRule
+    apiGroup: apps.open-cluster-management.io
+  subjects:
+  - name: require-resource-quotas-vm-namespaces
+    kind: ConfigurationPolicy
+    apiGroup: policy.open-cluster-management.io
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: clusters-with-vm-workloads
+spec:
+  clusterSelector:
+    matchLabels:
+      vm-workload: "true"
+----
+
+=== Compliance scanning at scale
+
+Configure the Compliance Operator on all managed clusters and aggregate results:
+
+* Each cluster runs its own *ScanSetting* + *ScanSettingBinding* (e.g., FedRAMP, CIS).
+* RHACM's *ComplianceOperator* integration (via Policy CustomResources) rolls out
+  scan definitions and collects *ComplianceCheckResult* summaries to the hub.
+* Create RHACM policies that alert if any cluster's scan shows high-severity failures.
+
+Example: enforce that all clusters run a `cis-kubernetes` scan:
+
+[source,yaml]
+----
+apiVersion: policy.open-cluster-management.io/v1
+kind: ConfigurationPolicy
+metadata:
+  name: ensure-cis-compliance-scan
+spec:
+  remediationAction: inform
+  severity: high
+  object-templates:
+  - complianceType: must have
+    objectDefinition:
+      apiVersion: compliance.openshift.io/v1alpha1
+      kind: ScanSettingBinding
+      metadata:
+        name: cis-kubernetes-binding
+        namespace: openshift-compliance
+      profileRef:
+        name: ocp4-cis
+      settingsRef:
+        name: default
+----
+
+Retrieve compliance state from RHACM hub:
+
+[source,sh,role=execute]
+----
+oc get compliancecheck -A --as=system:admin \
+  -o custom-columns=NAME:.metadata.name,STATUS:.status.checkStatus,SEVERITY:.status.severity
+----
+
+=== Audit and forensics
+
+Enable audit logging and centralize logs via RHACM:
+
+. *Local audit:* Each cluster's `openshift-audit` logs capture API calls, secret
+  access, and policy violations.
+. *Central aggregation:* Forward via Fluent Bit / Fluentd to a central ELK or
+  Splunk for cross-cluster correlation.
+. *RHACM observability:* Query aggregated logs via RHACM's Grafana dashboards
+  (if *Observability* is enabled on the hub).
+
+Example Fluent Bit DaemonSet (one per cluster) to forward audit logs:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-audit-config
+  namespace: openshift-logging
+data:
+  parsers.conf: |
+    [PARSER]
+      Name   audit
+      Format json
+      Time_Key requestReceivedTimestamp
+      Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+  fluent-bit.conf: |
+    [INPUT]
+      Name              tail
+      Path              /var/log/audit/audit.log
+      Parser            audit
+      Tag               audit.*
+    [OUTPUT]
+      Name              forward
+      Match             *
+      Host              central-logging.example.com
+      Port              24224
+----
+
+=== Remediation workflows
+
+RHACM policies can be set to *enforce* instead of *inform*, automatically
+correcting drift:
+
+[source,yaml]
+----
+apiVersion: policy.open-cluster-management.io/v1
+kind: ConfigurationPolicy
+metadata:
+  name: enforce-pci-network-policy
+spec:
+  remediationAction: enforce  # auto-apply if missing
+  severity: critical
+  object-templates:
+  - complianceType: must have
+    objectDefinition:
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: deny-untrusted-egress
+        namespace: vms-tenant-a
+      spec:
+        podSelector: {}
+        policyTypes:
+        - Egress
+        egress:
+        - to:
+          - namespaceSelector:
+              matchLabels:
+                name: openshift-dns
+          ports:
+          - protocol: UDP
+            port: 53
+----
+
+When this policy is applied, any cluster missing the NetworkPolicy will have it
+automatically created.
+
+=== Integrate with RHACS for deeper insights
+
+If RHACS is deployed on a hub or connected spokes:
+
+* RHACS sees the aggregate `virt-launcher` pods across all clusters and flags
+  anomalies (e.g., unusual process spawning inside VMs).
+* RHACM policies can gate migrations on RHACS *Risk Score* — do not move a VM
+  to a destination that has open critical vulnerabilities.
+* Combine RHACS *Network Graph* insights with RHACM's PlacementRules to
+  auto-select migration destinations with lower east-west attack surface.
+
 == Summary
 
-You configured compliance scanning with the Compliance Operator, applied a NetworkPolicy to control VM egress, and reviewed how RHACS extends workload security for OpenShift Virtualization. Continue with xref:04-day-to-day-ansible.adoc[Day to Day Operations] for inventory, observability, and Ansible automation.
+You configured compliance scanning with the Compliance Operator, applied a NetworkPolicy to control VM egress, and reviewed how RHACS and RHACM extend security for OpenShift Virtualization. Continue with xref:04-ansible.adoc[Ansible Automation] for inventory, observability, and day-to-day automation.

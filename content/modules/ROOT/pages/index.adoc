@@ -1,54 +1,209 @@
-= Operationalizing OpenShift Virtualization with CCLM
+= Environment
 
-Welcome to this lab, provisioned by Troshka. You will practice day-to-day
-virtual machine operations on OpenShift Virtualization, scale and place
-workloads inside a cluster, then finish with *cross-cluster live migration*
-(CCLM) between two nested OpenShift clusters.
+Welcome to *Beyond the Basics: Operationalizing Red Hat OpenShift Virtualization*. In this lab you practice day-to-day virtual machine operations, scale and place workloads inside a cluster, automate common tasks with Ansible Automation Platform, Advance Cluster Managment (ACM,), Advance Cluster Security (ACS) and finish by live-migrating a VM across two nested OpenShift clusters.
 
-OpenShift Virtualization enables you to bring virtual machines onto a modern,
-Kubernetes-based infrastructure. It enables the development and delivery of new
-applications as well as the modernization of existing ones and can create
-applications that consist of virtual machines, containers, and serverless
-functions — all managed together using Kubernetes-native tools and paradigms.
+*OpenShift Virtualization* brings virtual machines onto Kubernetes-based infrastructure so you can develop and deliver new applications, modernize existing ones, and run VMs, containers, and serverless functions together with Kubernetes-native tools.
 
-This environment gives you two nested OpenShift clusters that share an external
-Ceph backend and a dedicated migration L2 network. Post-install workloads
-configure OpenShift Virtualization (CNV) for *decentralized live migration*,
-Migration Toolkit for Virtualization (MTV / Forklift), Submariner, and MetalLB
-so you can live-migrate a workload VM from the *source* cluster to the
-*destination* cluster.
+*Ansible Automation Platform* lets platform and DevOps teams create, manage, and scale automation across physical, cloud, virtual, and edge environments—driving consistency and compliance across infrastructure, networking, applications, storage, and security.
 
-== What you have
+*Advance Cluster Management* provides the multicluster hub, a central management console for managing multiple Kubernetes-based clusters across data centers, public clouds, and private clouds. You can use the hub to create Red Hat OpenShift Container Platform clusters on selected providers, or import existing Kubernetes-based clusters. After the clusters are managed, you can set compliance requirements to ensure that the clusters maintain the specified security requirements. You can also deploy business applications across your clusters.
 
-* *Source cluster* — Single Node OpenShift (SNO) plus two workers
-  (`source.cclm.local`). Seed VMs live here in the `source-cluster` namespace.
-* *Destination cluster* — pure SNO (`dest.cclm.local`). Receives migrated VMs
-  into the `destination-cluster` namespace.
-* *Cluster Terminal* — a shell in the showroom with `oc` and kubeconfigs for
-  *both* clusters (no bastion host).
-* *Source Console* / *Destination Console* — OpenShift web consoles for each
-  cluster (proxy tabs on the right).
+*Advance Cluster Security* protects your vital applications across build, deploy, and runtime. Our software deploys in your infrastructure and integrates with your DevOps tooling and workflows to deliver better security and compliance. The policy engine includes hundreds of built-in controls to enforce DevOps and security best practices, industry standards such as CIS Benchmarks and National Institute of Standards Technology (NIST) guidelines, configuration management of both containers and Kubernetes, and runtime security.
 
-== Lab path
+Together, these products give you a single place to host and operate the workloads in your data center.
 
-. xref:01-environment.adoc[Environment] — topology and networks
-. xref:02-terminal.adoc[Cluster Terminal] — switch contexts between clusters
-. xref:03-vm-basics.adoc[OpenShift Virtualization Fundamentals] — create and manage a VM
-. xref:04-security.adoc[Security and Compliance] — Compliance Operator and NetworkPolicies
-. xref:04-day-to-day-ansible.adoc[Day to Day Operations] — inventory, observability, AAP automation
-. xref:05-live-migration.adoc[Live Migration] — compute and storage migration in-cluster
-. xref:06-resource-management.adoc[Resource Management] — CPU and memory overcommit
-. xref:07-real-world-scaling.adoc[Real World Scaling] — apply scaling under load
-. xref:08-hot-plug.adoc[Hot-Plug] — console hot-plug of CPU, memory, disk, and NIC
-. xref:09-affinity.adoc[Affinity] — node and pod affinity / anti-affinity
-. xref:10-descheduler.adoc[Dynamic Rescheduling] — descheduler-driven rebalance
-. xref:11-fencing.adoc[Fencing] — node health check and failure remediation
-. xref:12-verify-sync.adoc[Verify Sync Controllers] — confirm CCLM plumbing
-. xref:13-cclm-concepts.adoc[Cross-Cluster Live Migration] — concepts and MTV migrate source → destination
-. xref:15-known-issues.adoc[Known Issues] — quirks to watch for during the demo
-. xref:16-scale-to-the-moon.adoc[Scale to the Moon] — discussion scenarios
-. xref:conclusion.adoc[Conclusion]
+[[whobenefits]]
+== Who Will Benefit Most from Attending this Lab?
 
-See xref:glossary.adoc[Acronyms] for short forms used in the guide (HCO, MTV, ODF, …).
+*Virtual Machine Administrators* — Responsible for day-to-day management of virtual guests in OpenShift Virtualization: provisioning VMs and operating the guests and applications that run on them.
 
-Work through the pages using the tabs on the right.
+*Virtual Infrastructure Administrators* — Responsible for the physical infrastructure that hosts OpenShift Virtualization: hardware, storage, and networking changes that affect running virtual machines.
+
+[[contentcovered]]
+== What Content is Covered in this Lab?
+
+=== *Basics* 
+  - Create a project
+  - Explore OpenShift Virtualization UI
+  - Create a Linux Virtual Machine
+  - Administer Virtual Machines
+  - Control Virtual Machine State
+
+=== *Core Operators*
+  - Live Migration
+  - Resource Management
+  - Hot-Plug
+  - Affinity
+  - Descheduler
+  - Fencing
+  - Real World Scaling
+
+=== *Advance*
+==== *Multi-Cluster*
+  - Verify Sync Controllers
+  - CCLM Concepts
+  - CCLM with ACM
+
+==== *Security*
+  - Run compliance scans
+  - Apply NetworkPolicies to block VM egress
+  - Review RHACS/RHACM security integration for multi-cluster governance
+  - Configure audit logging and compliance reporting
+
+==== *Ansible*
+  - Create dynamic inventory from OpenShift VMs
+  - Automate VM lifecycle
+  - Patch VMs
+  - Hot-plug resources
+
+[[labrequirements]]
+== Requirements for the Lab Environment
+
+* A computer with a web browser and internet access.
+* A Chromium-based browser is recommended; some copy/paste actions do not work reliably in Firefox.
+* The remote console uses a US keyboard layout by default. If you use another layout, use copy/paste for special characters when needed.
+
+[[labenvironment]]
+== Lab Environment
+
+Consoles for both clusters appear in tabs on the right (*Source Console* and *Destination Console*) so you can keep instructions and the UI side by side.
+
+This environment is provisioned by Troshka as two nested OpenShift clusters that share an external Ceph backend and a dedicated migration L2 network. Post-install configuration enables OpenShift Virtualization for *decentralized live migration*, Migration Toolkit for Virtualization (MTV), Submariner, and MetalLB so you can live-migrate a workload VM from *source* to *destination*.
+
+=== Product versions
+
+* Red Hat OpenShift **4.22.15**
+* Red Hat OpenShift Virtualization (HCO) **4.22.12**
+* Red Hat OpenShift Data Foundation **4.22.6** (external / shared Ceph)
+* Migration Toolkit for Virtualization **2.12.10**
+* Red Hat Ansible Automation Platform operator **2.7.0** (*source* only)
+* Red Hat Advanced Cluster Management **2.17.3** (*source* only; Multicluster Engine **2.17.3**)
+* Compliance Operator **1.10.0** (*source* only)
+* Node Health Check Operator **0.12.1** (*source* only)
+* Self Node Remediation Operator **0.13.1** (*source* only)
+* Kube Descheduler Operator **5.4.3** (*source* only)
+* Submariner **0.24.1** (both clusters)
+* MetalLB operator **4.22.0** (both clusters)
+* Kubernetes NMState operator **4.22.0** (both clusters)
+* cert-manager operator **1.20.1** (both clusters)
+
+NOTE: *Destination* runs the CCLM, storage, and virtualization stack (OpenShift, CNV, ODF, MTV, Submariner, MetalLB, NMState, cert-manager). It does not install AAP, ACM, Compliance Operator, Node Health Check, Self Node Remediation, or the Descheduler. RHACS is not installed on either cluster.
+
+[[labaccess]]
+== Accessing the Clusters
+
+=== OpenShift console and CLI
+
+Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
+
+* *User:* {openshift_cluster_admin_username}
+* *Password:* {openshift_cluster_admin_password}
+
+Log in from the Cluster Terminal with:
+
+[source,sh,role=execute,subs="attributes"]
+----
+oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_password} --server={openshift_api_server_url}
+----
+
+For dual-cluster CLI work without re-logging in, see xref:02-terminal.adoc[Cluster Terminal] (`source` / `destination` contexts).
+
+[[aapaccess]]
+=== Ansible Automation Platform
+
+Your Ansible Automation Platform console is available {aap_controller_web_url}[here^].
+
+* *User:* {aap_controller_admin_user}
+* *Password:* {aap_controller_admin_password}
+
+== Clusters
+
+|===
+| Role | Domain | Nodes | Purpose
+
+| Source
+| `source.cclm.local`
+| SNO control plane + 2 workers
+| Runs seed VMs; MTV *source* provider
+
+| Destination
+| `dest.cclm.local`
+| SNO (control plane only)
+| MTV *destination* provider; receives migrations
+|===
+
+API and Ingress VIPs share the machine network (`10.0.0.0/24`):
+
+* Source: `10.0.0.10`
+* Destination: `10.0.0.110`
+
+== Networks
+
+|===
+| Network | CIDR | Attached to | Purpose
+
+| `cluster`
+| `10.0.0.0/24`
+| NIC0 on every node
+| Shared machine network; API / Ingress / DNS
+
+| `migration`
+| `172.16.100.0/24`
+| NIC1 on every node
+| Shared L2 for node + `lm-network` (CNV live migration)
+
+| `bmc`
+| `192.168.100.0/24`
+| BMC (Troshka)
+| Redfish / Agent-based Installer
+|===
+
+=== Migration L2 address plan
+
+|===
+| Address / range | Owner
+
+| `172.16.100.10`
+| source `cp-0`
+
+| `172.16.100.20`–`.21`
+| source workers
+
+| `172.16.100.110`
+| destination `cp-0`
+
+| `172.16.100.100`–`.109`
+| source MetalLB pool (`virt-sync-lb`, …)
+
+| `172.16.100.200`–`.209`
+| destination MetalLB pool
+
+| `172.16.100.224/28`
+| source whereabouts (`lm-network` NetworkAttachmentDefinition / NAD)
+
+| `172.16.100.240/28`
+| destination whereabouts (`lm-network` NAD)
+|===
+
+== Storage
+
+Both clusters attach to the *same* external Ceph RBD pool. Troshka exports project Ceph into each nested OpenShift Data Foundation (ODF) cluster. MTV StorageMaps target `ocs-external-storagecluster-ceph-rbd` so disks move with live migration without copying data over the migration network.
+
+== Operators (post-install)
+
+On both clusters (unless noted):
+
+* OpenShift Virtualization / HCO **4.22.12** with `decentralizedLiveMigration: true`
+* Migration Toolkit for Virtualization **2.12.10**
+* ODF **4.22.6** external mode (shared Ceph)
+* Submariner **0.24.1** (broker on source)
+* MetalLB, NMState, cert-manager
+
+Also on *source* for day-2 modules:
+
+* Ansible Automation Platform operator **2.7.0**
+* Advanced Cluster Management **2.17.3** (+ Multicluster Engine **2.17.3**)
+* Compliance Operator **1.10.0**
+* Node Health Check **0.12.1** + Self Node Remediation **0.13.1**
+* Kube Descheduler **5.4.3**
+* Cluster and network observability (COO, Loki, Network Observability)

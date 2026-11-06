@@ -1,0 +1,237 @@
+= Core Operators for OpenShift Virtualization
+
+== Introduction
+
+The Core Operators section covers the essential operational features and advanced capabilities that make OpenShift Virtualization production-ready. These operators and features enable you to manage VM workloads at scale, ensure optimal resource utilization, maintain high availability, and implement sophisticated scheduling strategies.
+
+.*What You'll Learn*
+
+* Migrate virtual machines between nodes and storage types without downtime
+* Manage CPU and memory resources across your cluster
+* Dynamically add or remove VM resources without stopping the VM
+* Implement node affinity and pod affinity/anti-affinity rules
+* Automatically reschedule VMs based on cluster state
+* Configure fencing and node health checks for failure remediation
+* Scale virtual workloads across your infrastructure
+
+.*Topics Covered*
+
+. xref:05-live-migration.adoc[Live Migration] — Move running VMs between nodes and storage classes
+. xref:06-resource-management.adoc[Resource Management] — Understand and optimize CPU/memory allocation
+. xref:08-hot-plug.adoc[Hot-Plug] — Add/remove resources without stopping VMs
+. xref:09-affinity.adoc[Affinity] — Control VM placement using node and pod affinity rules
+. xref:10-descheduler.adoc[Descheduler] — Dynamically reschedule VMs for optimal cluster utilization
+. xref:11-fencing.adoc[Fencing] — Configure node health checks and automatic failure remediation
+. xref:07-real-world-scaling.adoc[Real World Scaling] — Scale VMs and clusters in realistic production scenarios
+
+[[prerequisites]]
+== Prerequisites
+
+* Completion of the xref:00-basics.adoc[Basics] module
+* Access to an OpenShift cluster with OpenShift Virtualization installed
+* Running virtual machine(s) to work with
+* Administrator access to configure cluster-level settings
+* Understanding of Kubernetes concepts (nodes, scheduling, tolerations)
+
+[[learning_path]]
+== Recommended Learning Path
+
+Follow these topics in the suggested order for a comprehensive understanding:
+
+1. **xref:05-live-migration.adoc[Live Migration]** — Start with the foundational concept of moving workloads
+2. **xref:06-resource-management.adoc[Resource Management]** — Understand resource limits and overcommit ratios
+3. **xref:07-real-world-scaling.adoc[Real World Scaling]** — Learn scaling patterns and bottlenecks
+4. **xref:08-hot-plug.adoc[Hot-Plug]** — Practice adding resources dynamically
+5. **xref:09-affinity.adoc[Affinity]** — Implement placement strategies
+6. **xref:10-descheduler.adoc[Descheduler]** — Automate workload optimization
+7. **xref:11-fencing.adoc[Fencing]** — Configure high-availability safeguards
+
+[[quick_reference]]
+== Quick Reference
+
+[cols="3,4,2"]
+|===
+|Topic |Description |Module
+
+|Live Migration
+|Move running VMs between nodes without disruption
+|xref:05-live-migration.adoc[05]
+
+|Resource Management
+|Manage CPU overcommit, memory allocation, and utilization
+|xref:06-resource-management.adoc[06]
+
+|Hot-Plug Resources
+|Add/remove CPU, memory, disks, and NICs to running VMs
+|xref:08-hot-plug.adoc[08]
+
+|Node Affinity
+|Force VMs to run on specific nodes or node groups
+|xref:09-affinity.adoc[09]
+
+|Pod Affinity/Anti-Affinity
+|Control VM placement relative to other pods and VMs
+|xref:09-affinity.adoc[09]
+
+|Dynamic Rescheduling
+|Automatically optimize VM placement based on cluster state
+|xref:10-descheduler.adoc[10]
+
+|Fencing & Health Checks
+|Detect node failures and remediate automatically
+|xref:11-fencing.adoc[11]
+
+|Scaling Workloads
+|Horizontally and vertically scale VMs in production
+|xref:07-real-world-scaling.adoc[07]
+
+|===
+
+[[module_overview]]
+== Module Overview
+
+=== Live Migration (Module 05)
+
+Live migration allows you to move running virtual machines between compute nodes or storage classes without interrupting service. This is essential for:
+
+* Performing maintenance on nodes without VM downtime
+* Balancing resource utilization across the cluster
+* Storage migration for performance optimization
+* Compliance with application availability requirements
+
+xref:05-live-migration.adoc[→ Go to Live Migration module]
+
+=== Resource Management (Module 06)
+
+Resource management covers CPU and memory allocation, overcommit ratios, and verification of resource consumption. Topics include:
+
+* Understanding CPU overcommit and its implications
+* Memory overcommit strategies
+* Verifying actual vs. allocated resources
+* Setting resource requests and limits for VMs
+
+xref:06-resource-management.adoc[→ Go to Resource Management module]
+
+=== Hot-Plug (Module 08)
+
+Hot-plugging enables dynamic resource addition and removal without stopping VMs. This capability includes:
+
+* Adding CPU and memory to running VMs
+* Attaching and detaching virtual disks
+* Adding network interfaces without disruption
+* Use cases for dynamic scaling
+
+xref:08-hot-plug.adoc[→ Go to Hot-Plug module]
+
+=== Affinity (Module 09)
+
+Affinity rules control where VMs are scheduled within your cluster. This module covers:
+
+* Node affinity — Force placement on specific nodes
+* Pod affinity — Co-locate VMs together
+* Pod anti-affinity — Keep VMs separated
+* Use cases and best practices
+
+xref:09-affinity.adoc[→ Go to Affinity module]
+
+=== Descheduler (Module 10)
+
+The descheduler dynamically optimizes VM placement by evicting and rescheduling workloads based on configured policies:
+
+* Prerequisites for descheduler operation
+* Dynamic rescheduling policies
+* Monitoring and verifying descheduler behavior
+
+xref:10-descheduler.adoc[→ Go to Descheduler module]
+
+=== Fencing (Module 11)
+
+Fencing mechanisms detect unhealthy nodes and trigger automatic remediation:
+
+* Configuring node health checks
+* Simulating and recovering from node failures
+* Fencing strategies for high availability
+* Monitoring fencing events
+
+xref:11-fencing.adoc[→ Go to Fencing module]
+
+=== Real World Scaling (Module 07)
+
+This module applies multiple concepts in realistic production scenarios:
+
+* Examining resource utilization on running VMs
+* Horizontally scaling VM resources
+* Vertically scaling VM resources
+* Adding nodes to the cluster
+* Understanding swap and memory overcommit trade-offs
+
+xref:07-real-world-scaling.adoc[→ Go to Real World Scaling module]
+
+[[key_concepts]]
+== Key Concepts
+
+=== Live Migration
+Moving a running VM from one node or storage backend to another without stopping the guest OS. Enables non-disruptive maintenance and workload balancing.
+
+=== Resource Overcommit
+Allocating more CPU or memory to VMs than physically exists on nodes. Useful for burst workloads but requires careful monitoring.
+
+=== Hot-Plugging
+Adding or removing hardware resources (CPU, memory, disk, NIC) to a running VM without shutdown.
+
+=== Affinity Rules
+Kubernetes scheduling constraints that influence where VMs are placed:
+* **Node Affinity** — Host preference
+* **Pod Affinity** — Colocation with other workloads
+* **Pod Anti-Affinity** — Separation from other workloads
+
+=== Descheduling
+Post-scheduling optimization that evicts and replaces VMs to improve cluster efficiency.
+
+=== Fencing
+Automatic detection of unhealthy nodes and recovery mechanisms to maintain cluster health.
+
+[[common_workflows]]
+== Common Workflows
+
+=== Scenario 1: Non-Disruptive Node Maintenance
+1. xref:05-live-migration.adoc[Migrate VMs] off the target node
+2. Perform maintenance
+3. Resume normal operations with descheduler optimization
+
+=== Scenario 2: Handling Node Failure
+1. xref:11-fencing.adoc[Node health checks] detect failure
+2. xref:11-fencing.adoc[Fencing] evicts VMs from failed node
+3. VMs are xref:05-live-migration.adoc[automatically migrated] to healthy nodes
+
+=== Scenario 3: Peak Load Management
+1. xref:07-real-world-scaling.adoc[Monitor utilization] on running VMs
+2. xref:08-hot-plug.adoc[Hot-plug] additional resources as needed
+3. xref:07-real-world-scaling.adoc[Add cluster nodes] if capacity required
+
+=== Scenario 4: Workload Optimization
+1. Configure xref:09-affinity.adoc[affinity rules] for workload placement
+2. Enable xref:10-descheduler.adoc[descheduler] for ongoing optimization
+3. Periodically review xref:06-resource-management.adoc[resource allocation]
+
+[[next_steps]]
+== Next Steps
+
+After completing the Core Operators modules, you'll be ready to explore:
+
+* **Advanced Topics** — Multi-cluster management with CCLM, security and compliance, and Ansible automation
+* **Custom Configurations** — Tailoring operators for specific organizational needs
+* **Production Deployment** — Implementing these patterns in production environments
+
+Start with xref:05-live-migration.adoc[Live Migration] to begin learning core operational capabilities.
+
+== Summary
+
+The Core Operators section provides the operational foundations for managing OpenShift Virtualization at scale. These capabilities ensure:
+
+* **High Availability** — Automatic failure detection and recovery
+* **Optimal Utilization** — Dynamic resource management and scheduling
+* **Non-Disruptive Operations** — Live migration and hot-plugging
+* **Workload Control** — Affinity rules and placement strategies
+
+Mastery of these operators enables production-grade virtualization infrastructure.

@@ -1,0 +1,454 @@
+= Ansible Automation for OpenShift Virtualization
+
+== Introduction
+
+The Ansible Automation section covers how to automate virtual machine lifecycle management, configuration, and day-to-day operations using Red Hat Ansible Automation Platform (AAP). Ansible enables you to automate repetitive tasks, enforce consistency across VM deployments, and scale operations efficiently.
+
+This module enables organizations to:
+
+* Dynamically discover and inventory OpenShift-based VMs
+* Automate VM provisioning, configuration, and deprovisioning
+* Execute patching campaigns across multiple VMs
+* Perform dynamic resource allocation (hot-plugging)
+* Monitor VM health and performance
+* Create self-service workflows for developers
+* Reduce manual operational overhead
+
+.*What You'll Learn*
+
+* Create dynamic inventory from OpenShift Virtualization workloads
+* Build Ansible playbooks for VM lifecycle automation
+* Automate patch management workflows
+* Dynamically add resources to running VMs with Ansible
+* Monitor VM alerts, metrics, and logs
+* Integrate with Ansible Automation Platform (AAP) controller
+* Implement infrastructure-as-code for virtualization
+
+.*Topics Covered*
+
+. xref:04-day-to-day-ansible.adoc#dynamic_inventory[Dynamic Inventory] — Automatically discover and track OpenShift VMs
+. xref:04-day-to-day-ansible.adoc#vm_mgmt_power[VM Lifecycle Automation] — Automate provisioning, configuration, and lifecycle
+. xref:04-day-to-day-ansible.adoc[VM Patching] — Implement consistent patching strategies across environments
+. xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[Hot-Plug Automation] — Dynamically allocate resources with Ansible
+
+[[prerequisites]]
+== Prerequisites
+
+* Completion of the xref:00-basics.adoc[Basics] and xref:01-core.adoc[Core Operators] modules
+* Access to an OpenShift cluster with OpenShift Virtualization installed
+* Red Hat Ansible Automation Platform (AAP) controller installed and configured
+* Administrator access to both OpenShift cluster and AAP
+* Basic Ansible knowledge (playbooks, variables, handlers, roles)
+* SSH access to virtual machines
+* Understanding of YAML syntax
+
+[[learning_path]]
+== Recommended Learning Path
+
+Follow these topics in the suggested order:
+
+1. **xref:04-day-to-day-ansible.adoc#dynamic_inventory[Dynamic Inventory]** — Start by discovering and managing your VM inventory
+2. **xref:04-day-to-day-ansible.adoc[VM Lifecycle Automation]** — Build playbooks for common operations
+3. **xref:04-day-to-day-ansible.adoc[VM Patching]** — Implement organized patch management
+4. **xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[Hot-Plug Automation]** — Automate resource scaling
+
+[[quick_reference]]
+== Quick Reference
+
+[cols="3,4,2"]
+|===
+|Topic |Description |Module
+
+|Dynamic Inventory
+|Automatically discover and track OpenShift VMs in AAP
+|xref:04-day-to-day-ansible.adoc#dynamic_inventory[04]
+
+|VM Lifecycle Automation
+|Automate provisioning, configuration, and deprovisioning workflows
+|xref:04-day-to-day-ansible.adoc#vm_mgmt_power[04]
+
+|VM Patching
+|Implement consistent patch application across VMs
+|xref:04-day-to-day-ansible.adoc[04]
+
+|Hot-Plug Automation
+|Add CPU, memory, and storage to running VMs via Ansible
+|xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[04]
+
+|Monitoring & Alerts
+|Track VM health metrics and performance indicators
+|xref:04-day-to-day-ansible.adoc#alerts_graphs_logs[04]
+
+|===
+
+[[module_overview]]
+== Module Overview
+
+=== Dynamic Inventory (Module 04)
+
+Dynamic inventory automatically discovers and tracks virtual machines in OpenShift Virtualization, eliminating manual inventory management.
+
+*Key Features:*
+
+* OpenShift Virtualization as inventory source in AAP
+* Automatic VM discovery by namespace
+* Dynamic host grouping by labels and namespaces
+* Real-time inventory updates on every AAP job run
+* Credential management for cluster access
+* Variable assignment from VM metadata
+
+*Topics Covered:*
+
+* Creating an AAP inventory with OpenShift Virtualization source
+* Configuring cluster credentials and authentication
+* Setting up namespace filters and discovery scopes
+* Executing inventory sync jobs
+* Verifying discovered hosts
+* Using dynamic inventory in playbooks
+
+The dynamic inventory is the foundation for all subsequent automation workflows.
+
+xref:04-day-to-day-ansible.adoc#dynamic_inventory[→ Go to Dynamic Inventory section]
+
+=== VM Lifecycle Automation (Module 04)
+
+Automate the complete lifecycle of virtual machines from provisioning through deprovisioning.
+
+*Topics Covered:*
+
+* Automated VM provisioning from templates
+* Initial configuration via cloud-init
+* Post-deployment configuration and hardening
+* Health checks and validation
+* VM deprovisioning and cleanup
+* Error handling and rollback mechanisms
+
+*Common Lifecycle Stages:*
+
+1. **Request** — User or automation requests VM creation
+2. **Provision** — VM deployed from template
+3. **Configure** — Guest OS and applications configured
+4. **Deploy** — VM placed into production
+5. **Operate** — Ongoing monitoring and management
+6. **Patch** — Security and OS updates applied
+7. **Decommission** — VM and resources removed
+
+Automation reduces time-to-production and ensures consistency.
+
+xref:04-day-to-day-ansible.adoc#vm_mgmt_power[→ Go to VM Lifecycle Automation section]
+
+=== VM Patching (Module 04)
+
+Implement organized, repeatable patch management strategies for keeping VMs secure and current.
+
+*Topics Covered:*
+
+* Patch assessment and planning
+* Pre-patch validation and backup
+* Rolling patch deployments
+* Kernel and OS package updates
+* Application-specific patching
+* Post-patch validation and testing
+* Rollback procedures
+* Compliance verification after patching
+
+*Patching Strategies:*
+
+* **Rolling Patches** — Patch one VM at a time for continuous availability
+* **Canary Patching** — Test patches on a subset before full rollout
+* **Maintenance Window** — Schedule patches during off-peak hours
+* **Blue-Green Deployment** — Patch alternate environment, then switch
+
+Efficient patching keeps systems current without disrupting services.
+
+xref:04-day-to-day-ansible.adoc[→ Go to VM Automation section]
+
+=== Hot-Plug Automation (Module 04)
+
+Dynamically allocate resources to running VMs without interruption.
+
+*Topics Covered:*
+
+* CPU hot-plugging via Ansible
+* Memory hot-plugging
+* Disk attachment automation
+* Network interface addition
+* Load balancing and traffic management during resource addition
+* Monitoring resource utilization to trigger auto-scaling
+* Reverting hot-plugged resources
+
+*Use Cases:*
+
+* Burst workload handling
+* Performance optimization during peak load
+* Automated scaling based on metrics
+* Non-disruptive resource reallocation
+
+Hot-plug automation enables responsive infrastructure.
+
+xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[→ Go to Hot-Plug Automation section]
+
+[[playbook_examples]]
+== Common Playbook Patterns
+
+=== Pattern 1: VM Provisioning Workflow
+
+[source,yaml]
+----
+---
+- name: Provision OpenShift Virtualization VM
+  hosts: localhost
+  vars:
+    vm_name: production-db-01
+    vm_template: rhel9-template
+    vm_cpu: 4
+    vm_memory: 8Gi
+    namespace: vms-production
+  tasks:
+    - name: Create VM from template
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'vm.yml.j2') }}"
+
+    - name: Wait for VM to start
+      kubernetes.core.k8s_info:
+        kind: VirtualMachine
+        name: "{{ vm_name }}"
+        namespace: "{{ namespace }}"
+      register: vm_status
+      until: vm_status.resources[0].status.ready
+      retries: 30
+      delay: 10
+
+    - name: Configure guest OS
+      hosts: "{{ vm_name }}"
+      tasks:
+        - name: Update system packages
+          yum:
+            name: '*'
+            state: latest
+        - name: Install required packages
+          yum:
+            name: "{{ required_packages }}"
+            state: present
+----
+
+=== Pattern 2: Rolling VM Patching
+
+[source,yaml]
+----
+---
+- name: Rolling patch deployment
+  hosts: vm_group
+  serial: 1  # Patch one VM at a time
+  pre_tasks:
+    - name: Drain workload
+      command: drain_script.sh
+
+  tasks:
+    - name: Apply OS updates
+      yum:
+        name: '*'
+        state: latest
+      register: patch_result
+
+    - name: Reboot if kernel updated
+      reboot:
+        msg: "Rebooting for kernel update"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+      when: "'kernel' in patch_result.changes | string"
+
+  post_tasks:
+    - name: Health check
+      command: health_check.sh
+      register: health
+      failed_when: health.rc != 0
+
+    - name: Resume workload
+      command: resume_script.sh
+----
+
+=== Pattern 3: Auto-Scaling Hot-Plug
+
+[source,yaml]
+----
+---
+- name: Auto-scale VM resources
+  hosts: localhost
+  tasks:
+    - name: Get VM metrics
+      community.vmware.vmware_guest_info:
+        name: "{{ vm_name }}"
+      register: vm_info
+
+    - name: Hot-plug CPU if needed
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name }}"
+          spec:
+            template:
+              spec:
+                domain:
+                  cpu:
+                    cores: "{{ new_cpu_count }}"
+      when: current_cpu_utilization > 80
+
+    - name: Hot-plug memory if needed
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: kubevirt.io/v1
+          kind: VirtualMachine
+          metadata:
+            name: "{{ vm_name }}"
+          spec:
+            template:
+              spec:
+                domain:
+                  resources:
+                    requests:
+                      memory: "{{ new_memory_size }}"
+      when: current_memory_utilization > 85
+----
+
+[[aap_setup]]
+== Ansible Automation Platform Setup
+
+=== Prerequisites for AAP Integration
+
+* AAP Controller or Automation Hub installed
+* OpenShift cluster with Virtualization installed
+* Network connectivity from AAP to OpenShift API
+* Service account with appropriate RBAC permissions
+* Execution environment with OpenShift CLI and Python libraries
+
+=== Initial Configuration Steps
+
+1. **Create OpenShift Service Account**
+   [source,bash]
+   ----
+   oc create serviceaccount aap-automation -n openshift-virt
+   oc adm policy add-cluster-role-to-user cluster-admin \
+     system:serviceaccount:openshift-virt:aap-automation
+   ----
+
+2. **Add Credential in AAP**
+   * Navigate to *Credentials* in AAP Controller
+   * Create *OpenShift Kubernetes* credential
+   * Provide OpenShift API endpoint
+   * Add service account token and CA certificate
+
+3. **Create Dynamic Inventory**
+   * Use OpenShift Virtualization plugin
+   * Configure namespace filters
+   * Set credential reference
+   * Enable inventory sync
+
+4. **Create Job Templates**
+   * Reference dynamic inventory
+   * Use execution environment with required libraries
+   * Test with simple debug playbooks first
+
+[[automation_best_practices]]
+== Best Practices for VM Automation
+
+=== Playbook Design
+* Use roles to organize related tasks
+* Implement idempotent operations
+* Use handlers for service restarts
+* Separate variables from logic
+* Include comprehensive error handling
+
+=== Inventory Management
+* Keep inventory updated with VM metadata
+* Use consistent naming conventions
+* Tag VMs for easy grouping
+* Document custom inventory variables
+
+=== Execution Safety
+* Test playbooks in staging first
+* Use `--check` mode for dry-runs
+* Implement approval gates for production
+* Log all automation executions
+* Create rollback procedures
+
+=== Security
+* Store credentials in Ansible Vault
+* Use least-privilege service accounts
+* Audit all automation activities
+* Encrypt sensitive playbook variables
+* Rotate credentials regularly
+
+=== Scalability
+* Use serial execution for rolling updates
+* Implement parallelization where safe
+* Monitor job execution times
+* Optimize inventory queries
+* Use cached facts to reduce queries
+
+[[common_workflows]]
+== Common Automation Workflows
+
+=== Workflow 1: Day-1 VM Provisioning
+1. User submits VM request via self-service portal
+2. xref:04-day-to-day-ansible.adoc#dynamic_inventory[Dynamic inventory] discovers cluster capacity
+3. Provisioning playbook creates VM from template
+4. Cloud-init configures guest OS
+5. Post-deploy playbook hardenes and configures
+6. Health checks validate readiness
+7. VM placed into production
+
+=== Workflow 2: Security Patch Campaign
+1. Patch assessment identifies required updates
+2. Pre-patch backups created for all VMs
+3. xref:04-day-to-day-ansible.adoc[Rolling patch playbook] applies updates one VM at a time
+4. Post-patch health checks verify stability
+5. Compliance scan confirms patch application
+6. Report generated for audit
+
+=== Workflow 3: Performance Scaling
+1. Monitoring alerts when resource utilization high
+2. xref:04-day-to-day-ansible.adoc#vm_mgmt_hp[Hot-plug automation] adds CPU/memory
+3. Application reconfiguration uses new resources
+4. Performance metrics verified
+5. Scaling metrics logged for capacity planning
+
+=== Workflow 4: Decommissioning
+1. Decommission request initiated
+2. Data exported and backed up
+3. Applications gracefully shut down
+4. VM powered off
+5. Storage volumes cleaned up
+6. Resources deallocated
+
+[[next_steps]]
+== Next Steps
+
+After mastering Ansible Automation for OpenShift Virtualization:
+
+* **Advanced Workflows** — Building complex multi-step automation
+* **Self-Service Portals** — Creating user-facing provisioning interfaces
+* **Event-Driven Automation** — Triggering workflows on cluster events
+* **Cost Optimization** — Right-sizing VMs through automation
+* **Disaster Recovery Automation** — Automated failover and recovery
+
+Start with xref:04-day-to-day-ansible.adoc#dynamic_inventory[Dynamic Inventory] to begin automating your infrastructure.
+
+== Summary
+
+The Ansible Automation section enables operators and platform teams to:
+
+* **Automate Operations** — Reduce manual effort and human error
+* **Ensure Consistency** — Apply standardized configurations at scale
+* **Improve Security** — Implement compliance through automation
+* **Enable Self-Service** — Empower developers with self-provisioning
+* **Optimize Resources** — Right-size and scale dynamically
+
+By leveraging Ansible Automation Platform with OpenShift Virtualization, organizations achieve operational excellence and significant cost savings.
