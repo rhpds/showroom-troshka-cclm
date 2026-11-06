@@ -1,0 +1,228 @@
+= OpenShift Virtualization Basics
+
+== Introduction
+
+This module introduces you to the fundamentals of creating and managing virtual machines in OpenShift Virtualization. You will learn how to navigate the Virtualization perspective, create VMs from templates, configure resources, and manage VM lifecycle states. These essential skills form the foundation for all subsequent advanced topics.
+
+.*Goals*
+
+* Create a new OpenShift project for managing virtual machines
+* Explore the OpenShift Virtualization user interface and features
+* Create a Linux virtual machine from a template
+* Review and configure virtual machine resources (storage, networking, hardware)
+* Control virtual machine power states and lifecycle
+
+[[labaccess]]
+== Accessing the OpenShift Cluster
+
+Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
+
+Your console login is available with:
+
+* *User:* {openshift_cluster_admin_username}
+* *Password:* {openshift_cluster_admin_password}
+
+You can login to your OpenShift cluster on the provided terminal by copying and pasting the following syntax:
+
+[source,sh,role=execute,subs="attributes"]
+----
+oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_password} --server={openshift_api_server_url}
+----
+
+[[create_project]]
+== Create a Project
+
+. When you first log in, you will be placed in the *Core Platform* perspective with an introductory prompt. Click the *Skip tour* button to close the window.
++
+image::exercise0/00_Welcome_Message.png[title="Welcome Message", link=self, window=blank, width=100%]
+
+. From the left side menu, click *Home -> Projects* to view all available projects.
+
+. Click the *Create Project* button in the upper right corner.
++
+image::exercise0/01_Create_Project.png[title="Create Project", link=self, window=blank, width=100%]
+
+. In the dialog that appears, name the project *virtual-machines* and click *Create*.
++
+image::exercise0/02_Create_Project_Name.png[title="Name Your Project", link=self, window=blank, width=100%]
+
+You now have a dedicated project for working with virtual machines throughout this workshop.
+
+[[explore_virt]]
+== Explore OpenShift Virtualization UI
+
+=== Switch to Virtualization Perspective
+
+. From the left side menu, click *Core Platform* and select *Virtualization* from the dropdown.
++
+image::exercise0/03_Switch_Virt_View.png[title="Change to Virtualization Perspective", link=self, window=blank, width=100%]
+
+. Dismiss the welcome prompt by clicking the checkbox for *Do not show this again*.
++
+image::exercise0/04_Virt_Welcome.png[title="Virtualization Welcome Message", link=self, window=blank, width=100%]
+
+You are now in the Virtualization-centric view of OpenShift, where all virtualization management is centralized.
+
+=== Navigate the Virtualization Interface
+
+. Click *VirtualMachines* in the left side menu to view the tree interface.
++
+image::exercise0/06_Tree_View.png[title="Tree View", link=self, window=blank, width=100%]
+
+The interface is organized into three main columns:
+
+* *Left Column* — Navigation menu with Catalog, Templates, InstanceTypes, Storage, and Networking options
+* *Center Column* — Project view showing all projects and their VMs (toggle *Show only projects with VirtualMachines* to control visibility)
+* *Right Column* — Virtual machine details and status information
+
+image::exercise0/07_Left_Menu.png[title="Navigation Menu", link=self, window=blank, width=100%]
+
+. Toggle the *Show only projects with VirtualMachines* slider to reveal all projects, including your newly created *virtual-machines* project.
++
+image::exercise0/08_Project_Tree.png[title="Project Tree", link=self, window=blank, width=100%]
+
+. Click on the *affinity* project in the center column to filter the VM list by project.
++
+image::exercise0/10_Affinity_Project.png[title="Affinity Project", link=self, window=blank, width=100%]
+
+The right column now shows only VMs within the selected project.
+
+[[create_vm]]
+== Create a Linux Virtual Machine
+
+. In the center project column, select your *virtual-machines* project. The right column displays a *Create VirtualMachine* button.
+
+. Click *Create VirtualMachine* and select *From template*.
++
+image::exercise0/12_Create_VM_Button.png[title="Create VM Button", link=self, window=blank, width=100%]
++
+NOTE: VMs can also be created from InstanceType wizard or custom YAML, but we'll use templates for this exercise.
+
+. You will be taken to the Catalog showing available VM templates. Select the *Fedora VM* tile.
++
+image::exercise0/13_Create_VM_Templates.png[title="List of Templates", link=self, window=blank, width=100%]
++
+image::exercise0/14_Create_VM_Quick.png[title="Quick Create VM Dialog", link=self, window=blank, width=100%]
+
+. Change the VM name to *my-vm* and click *Quick create VirtualMachine*.
++
+image::exercise0/15_Create_VM_Quick_Name.png[title="Change the VMs Name", link=self, window=blank, width=100%]
+
+. The VM status will progress through *Provisioning* → *Starting* → *Running*. The storage provider clones the template disk during this time.
++
+image::exercise0/16_Fedora_Running.png[title="Your Fedora VM is Running", link=self, window=blank, width=100%]
+
+=== Explore VM Details
+
+Once the VM is running, review the tabs on the right panel:
+
+* *Details* — VM name, status, creation time, OS, resources, VNC terminal
+* *General* — Namespace, instance name, Kubernetes pod information
+* *Snapshots* — Snapshot information and creation options
+* *Network* — VM IP address and hostname
+* *Utilization* — CPU, memory, storage, and network throughput metrics
+* *Storage* — Attached volumes and disk information
+
+image::exercise0/17_Fedora_Details.png[title="VM Details Page", link=self, window=blank, width=100%]
+
+. Click the *Events* tab to review the provisioning steps and any issues encountered.
++
+image::exercise0/18_Fedora_Events.png[title="VM Events", link=self, window=blank, width=100%]
+
+Key events include:
+* DataVolume creation (manages disk cloning onto OpenShift storage)
+* VM instance startup
+
+[[admin_vms]]
+== Administer Virtual Machines
+
+=== Configuration Overview
+
+. Click the *Configuration* tab to access VM settings and resource modifications.
++
+image::exercise0/20_Configuration_Tab.png[title="Configuration Tab", link=self, window=blank, width=100%]
+
+The Configuration tab includes seven subtabs:
+
+* *Details* — Modify CPU, memory, hostname, boot order, and passthrough devices
+* *Storage* — Add or remove disks; attach ConfigMaps, Secrets, Service Accounts
+* *Network* — View and add network interfaces
+* *Scheduling* — Configure node affinity, tolerations, and eviction strategies
+* *SSH* — Configure SSH access via load balancer or key injection
+* *Initial run* — Configure cloud-init (Linux) or sys-prep (Windows) settings
+* *Metadata* — Manage labels and annotations for automation and tagging
+
+=== Review Storage Configuration
+
+. Click the *Storage* subtab.
++
+image::exercise0/21_Storage_Tab.png[title="Storage Tab", link=self, window=blank, width=100%]
+
+The default StorageClass (*ocs-external-storagecluster-ceph-rbd*) is provided by OpenShift Data Foundation (ODF). Each storage provider defines different storage classes with specific performance and availability characteristics.
+
+=== Review Network Configuration
+
+. Click the *Network* subtab.
++
+image::exercise0/22_Network_Tab.png[title="Network Tab", link=self, window=blank, width=100%]
+
+Quick-created VMs have a default masquerade interface on the Pod Network, which:
+* Connects the VM to the software-defined network (SDN)
+* Provides cluster-to-cluster egress
+* Enables access from other VMs and pods within the cluster
+* Supports external access via Route, Service (type: LoadBalancer), or Network Attachment Definitions
+
+[[vm_state]]
+== Control Virtual Machine State
+
+As a user with virtualization permissions, you can manage VM lifecycle states through the web console.
+
+=== State Management Options
+
+. Click the *Overview* tab to return to the summary screen.
+
+. In the top right corner, you'll see state control buttons and an *Actions* menu.
++
+image::exercise0/23_VM_State_Actions.png[title="VM State Buttons", link=self, window=blank, width=100%]
+
+State management options:
+
+* *Stop* — Gracefully shut down the VM
+* *Restart* — Reboot the VM (requires guest integrations)
+* *Pause* — Freeze the process without CPU/IO access (memory remains allocated at hypervisor level)
+* *Start* — Boot a stopped VM
+
+=== Practice State Transitions
+
+. Click the *Stop* button and wait until the VM enters *Stopped* state.
++
+image::exercise0/25_VM_Stopped.png[title="The VM is Stopped", link=self, window=blank, width=100%]
+
+. Click *Actions* > *Control* to see the context menu. Notice that *Start* is now available while *Restart* and *Pause* are greyed out.
++
+image::exercise0/26_VM_Actions_List_Stopped.png[title="Action Menu with VM Stopped", link=self, window=blank, width=100%]
+
+. Click *Start* and wait for the *Running* status.
+
+. Use *Actions* > *Control* > *Pause* to pause the VM. This is useful for immediately freeing node resources without losing application state.
++
+image::exercise0/27_VM_Actions_Paused.png[title="The VM is Paused", link=self, window=blank, width=100%]
+
+. Resume the VM by clicking *Unpause* from the *Actions* > *Control* menu or using the shortcut button.
+
+[[cleanup]]
+== Cleanup
+
+Before proceeding to the next module, shut down the *my-vm* virtual machine using the *Stop* button or *Actions* menu to conserve lab resources.
+
+== Summary
+
+In this module, you have:
+
+* Created an OpenShift project for virtual machine management
+* Navigated the Virtualization perspective and explored the UI structure
+* Provisioned a virtual machine from a template
+* Reviewed VM configuration options for storage and networking
+* Practiced VM lifecycle state management (start, stop, pause, restart)
+
+These fundamental skills are the foundation for all advanced OpenShift Virtualization capabilities. Proceed to the xref:05-live-migration.adoc[Live Migration] module to explore advanced VM operations.
