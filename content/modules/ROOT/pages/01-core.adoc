@@ -14,205 +14,1687 @@ The Core Operators section covers the essential operational features and advance
 * Configure fencing and node health checks for failure remediation
 * Scale virtual workloads across your infrastructure
 
-.*Topics Covered*
+=== Live Migration
 
-. xref:05-live-migration.adoc[Live Migration] — Move running VMs between nodes and storage classes
-. xref:06-resource-management.adoc[Resource Management] — Understand and optimize CPU/memory allocation
-. xref:08-hot-plug.adoc[Hot-Plug] — Add/remove resources without stopping VMs
-. xref:09-affinity.adoc[Affinity] — Control VM placement using node and pod affinity rules
-. xref:10-descheduler.adoc[Descheduler] — Dynamically reschedule VMs for optimal cluster utilization
-. xref:11-fencing.adoc[Fencing] — Configure node health checks and automatic failure remediation
-. xref:07-real-world-scaling.adoc[Real World Scaling] — Scale VMs and clusters in realistic production scenarios
+==== Introduction
 
-[[prerequisites]]
-== Prerequisites
+Live migration of workloads between compute nodes and storage types is a crucial feature expected of any modern hypervisor. OpenShift Virtualization allows for the simple and easy process of migrating your virtual machine workloads between nodes and storageclasses in the cluster as determined by either the Kubernetes scheduler, or you the end user.
 
-* Completion of the xref:00-basics.adoc[Basics] module
-* Access to an OpenShift cluster with OpenShift Virtualization installed
-* Running virtual machine(s) to work with
-* Administrator access to configure cluster-level settings
-* Understanding of Kubernetes concepts (nodes, scheduling, tolerations)
+In a container-based application there are often multiple replicas of a container spread across the cluster ensuring availability, and should a hosting node run out of resources, a container is simply killed and redeployed elsewhere in the cluster. The same does not apply to virtual machines which are stateful workloads with persistent storage. Thus virtual workloads may need to be live migrated for reasons related to physical resource limitations, planned maintenance, or to enhance performance of particular workload.
 
-[[learning_path]]
-== Recommended Learning Path
+.*Goals*
 
-Follow these topics in the suggested order for a comprehensive understanding:
+* Live migration of a virtual machine from one node to another random node.
+* Live migration of a virtual machine from one node to another specific node.
+* Live migration of virtual machine storage from one StorageClass to another.
 
-1. **xref:05-live-migration.adoc[Live Migration]** — Start with the foundational concept of moving workloads
-2. **xref:06-resource-management.adoc[Resource Management]** — Understand resource limits and overcommit ratios
-3. **xref:07-real-world-scaling.adoc[Real World Scaling]** — Learn scaling patterns and bottlenecks
-4. **xref:08-hot-plug.adoc[Hot-Plug]** — Practice adding resources dynamically
-5. **xref:09-affinity.adoc[Affinity]** — Implement placement strategies
-6. **xref:10-descheduler.adoc[Descheduler]** — Automate workload optimization
-7. **xref:11-fencing.adoc[Fencing]** — Configure high-availability safeguards
+==== Prerequisites for Live Migration
 
-[[quick_reference]]
-== Quick Reference
+* The underlying PVC must use *ReadWriteMany (RWX)* access mode
+* The pod network must not be configured with the bridge binding type.
+* Ports *49152 and 49153* must be available in the VM's virt-launcher pod; live migration fails if these ports are specified in a masquerade network interface.
+* CPU model must match on the source and destination compute node - you can not live migrate virtual guests from Intel to AMD, ARM, or PowerPC processor types, even though they are all supported by OpenShift Virtualization and mixed clusters can exist.
 
-[cols="3,4,2"]
-|===
-|Topic |Description |Module
+[[compute_rand]]
+==== Compute Migration to a random node
 
-|Live Migration
-|Move running VMs between nodes without disruption
-|xref:05-live-migration.adoc[05]
+During maintenance or troubleshooting, you might need to migrate a VM to a different node. Live migration is the process of moving a running Virtual Machine Instance (VMI) to a different node without disruption.
 
-|Resource Management
-|Manage CPU overcommit, memory allocation, and utilization
-|xref:06-resource-management.adoc[06]
+In this exercise, you will be performing a live migration of Virtual Machine from one compute node to another. To do this, you will access a running VM, determine its current node, and then migrate it to another node.
 
-|Hot-Plug Resources
-|Add/remove CPU, memory, disks, and NICs to running VMs
-|xref:08-hot-plug.adoc[08]
+. From the left side panel, click on *VirtualMachines*. In the central virtual machine overview column, select the *live-migrate* project and click on the Virtual Machine named *live-migrate-vm1*.
++
+image::exercise1/01-vm-start-000.png[title="Select the Virtual Machine", link=self, window=blank, width=100%]
 
-|Node Affinity
-|Force VMs to run on specific nodes or node groups
-|xref:09-affinity.adoc[09]
+. If the virtual machine is currently powered off, click the blue *Play* button to *Start* the Virtual Machine.
++
+image::exercise1/01-vm-start-001.png[title="Start the Virtual Machine", link=self, window=blank, width=100%]
 
-|Pod Affinity/Anti-Affinity
-|Control VM placement relative to other pods and VMs
-|xref:09-affinity.adoc[09]
+. The Virtual Machine will schedule, start and move into the *Running* state as seen below.
++
+image::exercise1/01-vm-start-002.png[title="Running Virtual Machine", link=self, window=blank, width=100%]
 
-|Dynamic Rescheduling
-|Automatically optimize VM placement based on cluster state
-|xref:10-descheduler.adoc[10]
+. To see the node the Virtual Machine is currently running on, look at the *General* box on the right hand side of the *VirtualMachine details* page for the *Node* name. In the following screenshot, the node is *worker-cluster-bj7mh-1*.
++
+image::exercise1/01-image-compute-002.png[title="Virtual machine details", link=self, window=blank, width=100%]
 
-|Fencing & Health Checks
-|Detect node failures and remediate automatically
-|xref:11-fencing.adoc[11]
+. To migrate the Virtual Machine to another node, click on the *Actions* menu, hover over *Migration*, and then click *Compute*.
++
+image::exercise1/01-image-compute-003.png[title="Initiate migration", link=self, window=blank, width=100%]
 
-|Scaling Workloads
-|Horizontally and vertically scale VMs in production
-|xref:07-real-world-scaling.adoc[07]
+. The default selection is *Automatically selected Node* which allows the Kubernetes scheduler to decide the best placement for the virtual guest. Click the *Migrate VirtualMachine* button.
++
+image::exercise1/01-image-compute-004.png[title="Configure migration", link=self, window=blank, width=100%]
 
-|===
+. Wait a few moments and the virtual machine status will change from *Running* to *Migrating*.
++
+image::exercise1/01-image-compute-006.png[title="VM is migrating", link=self, window=blank, width=100%]
 
-[[module_overview]]
-== Module Overview
+. The live migration will complete and the virtual machine will return to a *Running* state on a different worker node. In the following screenshot, the node is *worker-cluster-bj7mh-2*.
++
+image::exercise1/01-image-compute-007.png[title="VM is running", link=self, window=blank, width=100%]
 
-=== Live Migration (Module 05)
+. The VM has live migrated to a new worker node while still running.
 
-Live migration allows you to move running virtual machines between compute nodes or storage classes without interrupting service. This is essential for:
+[[compute_spec]]
+==== Compute Migration to a specific node
 
-* Performing maintenance on nodes without VM downtime
-* Balancing resource utilization across the cluster
-* Storage migration for performance optimization
-* Compliance with application availability requirements
+During maintenance or troubleshooting, you may need to choose the destination of a virtual guest during the live migration process. The process here is quite similar to the last exercise, there are just a few additional steps that allow for you to live migrate a Virtual Machine to a *specific* node in the cluster.
 
-xref:05-live-migration.adoc[→ Go to Live Migration module]
+. The Virtual Machine should already be *Running* from the last lesson. If it is not, click the blue *Play* button to *Start* the Virtual Machine and wait for it to enter the *Running* state.
++
+image::exercise1/01-image-compute-010.png[title="Virtual machine details", link=self, window=blank, width=100%]
 
-=== Resource Management (Module 06)
+. To migrate the Virtual Machine to another node, click on the *Actions* menu, hover over *Migration*, and then click *Compute*.
++
+image::exercise1/01-image-compute-011.png[title="Initiate migration", link=self, window=blank, width=100%]
 
-Resource management covers CPU and memory allocation, overcommit ratios, and verification of resource consumption. Topics include:
+. You will be presented with the *Migrate VirtualMachine to a different Node* window.
+. Select the *Specific Node* option, which will then display the list of available nodes. Select the checkbox next to the other worker node and click the *Migrate VirtualMachine* button.
++
+image::exercise1/01-image-compute-012.png[title="Configure migration", link=self, window=blank, width=100%]
 
-* Understanding CPU overcommit and its implications
-* Memory overcommit strategies
-* Verifying actual vs. allocated resources
-* Setting resource requests and limits for VMs
+. You will see the Virtual Machine status changes from *Running* to *Migrating*.
++
+image::exercise1/01-image-compute-013.png[title="VM is migrating", link=self, window=blank, width=100%]
 
-xref:06-resource-management.adoc[→ Go to Resource Management module]
+. Once the migration completes, the virtual machine status will return to a *Running* state, and the VM will now reside on the chosen destination node.
++
+image::exercise1/01-image-compute-014.png[title="VM is running", link=self, window=blank, width=100%]
 
-=== Hot-Plug (Module 08)
+[[storage_mig]]
+==== Storage Migration
 
-Hot-plugging enables dynamic resource addition and removal without stopping VMs. This capability includes:
+Storage environments often have their own lifecycles, maintenance schedules, and performance profiles. It may become necessary to migrate virtual workloads to a new storage class should the backing storage system need to undergo maintenance or be replaced entirely. Likewise, many customers create custom storage classes based on tiers of performance. A virtual machine running a database that needs to be highly responsive may map to a storageclass provided by an all-flash system, while a simple virtual webserver may find itself attached to a storageclass from a traditional spinning disk array. OpenShift Virtualization allows the migration of PVCs from one StorageClass to another while the virtual machine is running.
 
-* Adding CPU and memory to running VMs
-* Attaching and detaching virtual disks
-* Adding network interfaces without disruption
-* Use cases for dynamic scaling
+. Let's begin by taking a look at the storage on our *live-migrate-vm1* virtual machine.
+. Click on the *Configuration* tab and select *Storage*. You can see that the Virtual Machine currently has a single 30GB bootable disk that is using the storage class called *ocs-external-storagecluster-ceph-rbd*.
++
+image::exercise1/01-image-storage-002.png[title="View storage details", link=self, window=blank, width=100%]
 
-xref:08-hot-plug.adoc[→ Go to Hot-Plug module]
+. The storage live migration task can often take a bit longer than the compute live migration, so we will add an additional test to confirm that the virtual machine operation is unaffected during the process.
+. Click on the *Console* tab and login to the virtual machine using the provided credentials, and the *Copy to clipboard* and *Paste to console* buttons.
++
+image::exercise1/01-image-storage-001.png[title="Log into virtual console", link=self, window=blank, width=100%]
++
+NOTE: You may need to click on a browser pop-up to allow this action to take place.
 
-=== Affinity (Module 09)
+. Now let's run a command that will run continuously through the migration process, to demonstrate that the VM does not go offline. Use the `ping` command to a publicly available website like www.google.com. You can use the provided toolbox below to copy the command, and paste it using the *Paste to console* button as in the previous step.
++
+[source,sh,role=execute]
+----
+ping www.google.com
+----
++
+image::exercise1/01-image-storage-003.png[title="Run command on console", link=self, window=blank, width=100%]
 
-Affinity rules control where VMs are scheduled within your cluster. This module covers:
+. Now click on the *Actions* menu, hover over the *Migration* option and click on the option for *Storage*.
++
+image::exercise1/01-image-storage-004.png[title="Initiate storage migration", link=self, window=blank, width=100%]
 
-* Node affinity — Force placement on specific nodes
-* Pod affinity — Co-locate VMs together
-* Pod anti-affinity — Keep VMs separated
-* Use cases and best practices
+. In the *Migrate VirtualMachine storage* window, review the options, keep the defaults and click the *Next* button.
++
+image::exercise1/01-image-storage-005.png[title="Migration details", link=self, window=blank, width=100%]
 
-xref:09-affinity.adoc[→ Go to Affinity module]
+. For the *Destination StorageClass*, select the new *StorageClass* called *custom-storage-class* and click *Next*.
++
+image::exercise1/01-image-storage-006.png[title="Select destination StorageClass", link=self, window=blank, width=100%]
 
-=== Descheduler (Module 10)
+. Review the final storage migration configuration and click *Migrate VirtualMachine storage*.
++
+image::exercise1/01-image-storage-007.png[title="Review migration details", link=self, window=blank, width=100%]
 
-The descheduler dynamically optimizes VM placement by evicting and rescheduling workloads based on configured policies:
+. The next window will show you the status of the storage migration. It is safe to close the window by clicking the *X* in the top corner, or you may click on the link to *View storage migrations*. Do not click the *Stop* button.
++
+image::exercise1/01-image-storage-008.png[title="Migration has started", link=self, window=blank, width=100%]
++
+NOTE: Because this is a lab environment, the migration process may take longer than it would in a production environment. Please be patient as this process completes.
 
-* Prerequisites for descheduler operation
-* Dynamic rescheduling policies
-* Monitoring and verifying descheduler behavior
+. To view the storage migration status, click on *Overview* on the left side navigation menu, and select the *Migrations* tab. You will see the current migration listed, along with a progress bar, and other informational graphs such as bandwidth consumption.
++
+image::exercise1/01-image-storage-009.png[title="Migration is running", link=self, window=blank, width=100%]
 
-xref:10-descheduler.adoc[→ Go to Descheduler module]
+. Once the migration is complete it will disappear from the *Overview -> Migrations* page.
++
+image::exercise1/01-image-storage-109.png[title="Migration is complete", link=self, window=blank, width=100%]
+
+. Using the left side navigation menu select the *live-migrate* namespace and click on the Virtual Machine named *live-migrate-vm1*.
++
+image::exercise1/01-image-storage-209.png[title="Select live-migrate-vm1", link=self, window=blank, width=100%]
++
+NOTE: You should still be able to see the `ping` command running in the embedded console.
+
+. Click on the *Configuration* tab and select *Storage*. You can see that the name of the *Source* has changed and the *Storage class* is now *custom-storage-class*, which is what you selected for the storage migration.
++
+image::exercise1/01-image-storage-010.png[title="VM has been migrated", link=self, window=blank, width=100%]
+
+. Now return to the *Console* tab, you will see that your ping is still running. Stop the command with `Ctrl+c` to confirm that it ran continuously throughout the extended live migration process, and that no pings were dropped.
++
+image::exercise1/01-image-storage-011.png[title="No interruption during storage migration", link=self, window=blank, width=100%]
+
+Congratulations, you have completed the Live Migration exercises!
+
+IMPORTANT: Prior to moving on to the next section, please shut down the *live-migrate-vm1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
+
+=== Resource Management
+
+==== Introduction
+
+*Overcommit* occurs when the allocated virtual resources exceed the physical resources available on the host. Overcommit allows users to enable higher workload density by leveraging the fact that Virtual Machines (VMs) rarely use their full allocated capacity simultaneously.
+
+In this section, you will learn about two overcommit tasks:
+
+.*Goals*
+
+* Understand and Overcommit CPU on a Virtual Machine
+* Understand, Enable, and Overcommit Memory on a Virtual Machine
+* Excluding a virtual machine from overcommit
+
+[[understanding_cpu]]
+==== Understanding CPU Overcommit
+
+In OpenShift Virtualization, compute resources assigned to Virtual Machines (VMs) are backed by either *Guaranteed CPUs* or *time-sliced CPU shares*.
+
+*Guaranteed CPUs*, also known as CPU reservations, dedicate CPU cores or threads to a specific workload, making them unavailable to any other workload. Assigning guaranteed CPUs to a VM ensures sole access to a reserved physical CPU. You enable dedicated resources for VMs to use guaranteed CPUs.
+
+*Time-sliced CPUs* dedicate a slice of time on a shared physical CPU to each workload. You can specify the slice size during VM creation or when the VM is offline. By default, each vCPU receives 100 milliseconds (1/10 of a second) of physical CPU time.
+
+With time-sliced CPUs, the Linux kernel's *Completely Fair Scheduler (CFS)* manages how VMs share physical CPU cores. CFS rotates VMs through available cores, giving each VM a proportional slice of CPU time based on its configured CPU requests.
+
+By default OpenShift Virtualization has a 10:1 overcommit ratio. To achieve CPU overcommit, each VM's *virt-launcher* pod will define _100m_ of CPU requests or _1/10th_ of a CPU from a Kubernetes resource and scheduling perspective, per vCPU requested by the VM.
+
+The default _10:1_ overcommit ratio can be reconfigured to the desired overcommit level by changing the *vmiCPUAllocationRatio* on the *hyperconverged* Custom Resource. Changing this ratio will influence the CPU requests for each vCPU that is allocated by default, which enforces the maximum level of CPU overcommit through Kubernetes based request scheduling.
+
+NOTE: Resource assignments are made at *virt-launcher* pod scheduling time, so any VMs will need to be live migrated or stopped and restarted to change CPU allocation behavior after a ratio change as been made.
+
+[[verifying_cpu]]
+==== Verifying CPU Overcommit Ratio
+
+. Ensure that you are logged into both the OpenShift console and the provided Terminal as the Admin account before proceeding with this lab module.
+
+. To understand CPU overcommit, you must first identify how many physical CPU cores are available on your worker nodes, let's start by listing all of the worker nodes in your cluster:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get nodes -l node-role.kubernetes.io/worker=
+----
++
+[,shell,subs="attributes"]
+.Output
+----
+NAME                            STATUS   ROLES                         AGE     VERSION
+control-plane-cluster-bj7mh-1   Ready    control-plane,master,worker   25h     v1.34.6
+worker-cluster-bj7mh-1          Ready    worker                        4h21m   v1.34.6
+worker-cluster-bj7mh-2          Ready    worker                        4h21m   v1.34.6
+----
+
+. Now let's run another command to show the available CPU resources on a specific node:
++
+[,text,role="execute wrap",subs="attributes"]
+----
+oc describe node $(oc get nodes -o custom-columns=":metadata.name" --no-headers | grep worker | head -n 1) | grep -A 9 "Capacity:"
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+Capacity:
+  cpu:                            8
+  devices.kubevirt.io/kvm:        1k
+  devices.kubevirt.io/tun:        1k
+  devices.kubevirt.io/vhost-net:  1k
+  ephemeral-storage:              104266732Ki
+  hugepages-1Gi:                  0
+  hugepages-2Mi:                  0
+  memory:                         24600612Ki
+  pods:                           250
+----
+
+. The `cpu` value shows the number of physical CPU cores (or threads if hyper-threading is enabled) available on the node.
+
+. Alternatively, you can check the CPU allocatable resources (physical CPUs minus system reservations) with the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get node $(oc get nodes -o custom-columns=":metadata.name" --no-headers | grep worker | head -n 1) -o jsonpath='{.status.allocatable.cpu}{"\n"}'
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+7500m
+----
+
+. Using the left side navigation menu in the OpenShift Console, you can navigate to *Compute → Nodes* to view their key specifications.
++
+image::exercise2/node-details.png[title="Confirm number of CPUs", link=self, window=blank, width=100%]
+
+. Now let's take a look at all of the vCPU allocations in our *over-commit* project.
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get vms -n over-commit -o custom-columns=\
+NAMESPACE:.metadata.namespace,\
+NAME:.metadata.name,\
+vCPUs:.spec.template.spec.domain.cpu.cores,\
+STATUS:.status.printableStatus
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+NAMESPACE     NAME              vCPUs   STATUS
+over-commit   overcommit-vm-1   16      Stopped
+----
+
+. For a specific VM, say the *overcommit-vm-1* virtual machine, you can check the vCPU configuration with the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get vm overcommit-vm-1 -n over-commit -o jsonpath='{.spec.template.spec.domain.cpu.cores}{"\n"}'
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+16
+----
+
+. This is all useful information to have when exploring the resources available in your cluster.
+
+. Now, let's start the *overcommit-vm-1* Virtual Machine, you can do this via the OpenShift Console by selecting the VM and pressing the *Play* button in the corner.
++
+image::exercise2/start-vm.png[title="Start VM", link=self, window=blank, width=100%]
+
+. View CPU requests and limits for the running VM:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get vmi overcommit-vm-1 -n over-commit -o jsonpath='{.spec.domain.cpu}{"\n"}'
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+{"cores":16,"maxSockets":8,"model":"Icelake-Server-v2","sockets":2,"threads":1}
+----
+
+. Let's compare the output of the CLI command to what we see in the OpenShift console. Select the *over-commit* namespace and select the *overcommit-vm-1* VM to view the current *CPU/Memory* allocation.
++
+image::exercise2/vm-details.png[title="Confirm number of CPUs", link=self, window=blank, width=100%]
+
+. Now that we can see what the OpenShift console is reporting, let's confirm the number of CPUs from inside the guest.
+
+. Click on the *Console* tab and login to the Virtual Machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials provided.
++
+image::exercise2/vm-console.png[title="Login to VM console", link=self, window=blank, width=100%]
+
+. From the virtual machine console, run the following command to verify the number of CPUs:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+nproc
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+32
+----
++
+image::exercise2/overcommit-nproc.png[title="Confirm number of CPUs", link=self, window=blank, width=100%]
+
+. To calculate the overcommit ratio on a specific node you must identify all of the VMs running on the node:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get vmi -A -o wide | grep $(oc get vmi overcommit-vm-1 -n over-commit -o json | jq -r '.status.nodeName')
+----
++
+[,shell,subs="attributes"]
+.Output
+----
+NAME              AGE   PHASE     IP             NODENAME                        READY   LIVE-MIGRATABLE
+overcommit-vm-1   16m   Running   10.234.0.52   worker-cluster-bj7mh-1           True    True
+----
+
+. In order to figure out our current overcommit ratio, we need to sum the CPUs for all of the VMs currently running on the node.
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+NODE=$(oc get nodes -o custom-columns=":metadata.name" --no-headers | grep $(oc get vmi overcommit-vm-1 -n over-commit -o json | jq -r '.status.nodeName'))
+oc get vmi -A -o json | \
+jq -r --arg NODE "$NODE" \
+'.items[] | select(.status.nodeName == $NODE) |
+{
+  name: .metadata.name,
+  total_vcpus: ((.spec.domain.cpu.sockets // 1) * (.spec.domain.cpu.cores // 1) * (.spec.domain.cpu.threads // 1))
+}' | \
+jq -s 'map(.total_vcpus) | add'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+32
+----
++
+NOTE: You should at least see "32" here, but your answer may differ if there are additional VMs running in the lab environment and on the same node.
+
+. Knowing the number of currently running CPUs, it's simple enough to determine the overcommit ratio by dividing the number of allocated CPUs, by the number of physical CPU cores on the node.
++
+[,shell,role="wrap",subs="attributes"]
+----
+Overcommit Ratio = Total vCPUs allocated / Physical CPU cores
+
+Example:
+- Physical CPU cores: 8 (Available capacity from step 3.b)
+- Total vCPUs allocated: 32
+- Overcommit ratio: 32 / 8 = 4:1
+----
+
+[[default_cpu_ratio]]
+==== Understanding the Default 10:1 CPU Overcommit Ratio
+
+OpenShift Virtualization applies a default *10:1 CPU overcommit ratio* when you don't explicitly specify CPU requests. This means that if a VM has multiple vCPUs, the actual CPU request on the *virt-launcher* pod will be 1/10th of the total cpu requested by the VM.
+
+. First let's check *virt-launcher* pod CPU Requests with the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get pods -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+NAME                                  READY   STATUS    RESTARTS   AGE
+virt-launcher-overcommit-vm-1-vn868   2/2     Running   0          25m
+----
++
+NOTE: Recall that in OpenShift Virtualization, all virtual machines are actually running within Kubernetes Pods on the cluster.
+
+. The amount of CPU being requested for a virtual machine can be easily located in the pod definition of the VM. To find this information we can select the pod name from the *General* field on the *Overview* of our VM in the OpenShift console.
++
+image::exercise2/vm-pod.png[title="VM Pod", link=self, window=blank, width=100%]
+
+. When you click on the pod name, you load the *Pod details* page. Click on the *YAML* tab and scroll down to the *spec:containers:resources:requests:cpu* field.
++
+image::exercise2/pod-cpu-details.png[title="Confirm number of CPUs", link=self, window=blank, width=100%]
+
+. Notice that a VM with 32 vCPUs only requests `3200m` (0.1 * 32 = 3.2 CPU) by default!
+
+[[understanding_memory]]
+==== Understanding Memory Overcommit
+
+Prior to the release of OpenShift 4.21, based on Kubernetes 1.21, there was not a generally available native SWAP implementation in Kubernetes. In earlier releases OpenShift Virtualization worked around this lack of feature availability by utilizing the *wasp-agent* add-on.
+
+Refer to the https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/virtualization/postinstallation-configuration#virt-using-wasp-agent-to-configure-higher-vm-workload-density_virt-configuring-higher-vm-workload-density[wasp-agent component documentation] for more information.
+
+Memory oversubscription without use of swap is hazardous because if the amount of memory required by processes running on a node exceeds the amount of RAM available, processes will be killed. That's not desirable, particularly for VMs where the workloads will go offline if the VM is killed.
+
+The *memoryOvercommitPercentage* parameter on the *hyperconverged* Custom Resources tells OpenShift Virtualization how to scale the memory requests for each VM. When set to the default, 100, it calculates memory requests based on the full amount of memory declared by the VM. When it's set to a higher value, the request is set to a proportionally smaller value than the VM requested, allowing for memory overcommit.
+
+For example, think of a VM assigned 16GiB of memory. If the overcommit percentage is set to its default value of 100%, the memory request on the pod will be defined as 16 GiB, plus an extra allocation for the qEMU process running the VM.
+
+If it's set to 200%, the request on the pod will be set to 8GiB, plus the additional overhead, with the VM still seeing 16GiB.
+
+This can be very important when managing workloads affecting and determining what our cluster can actually support workload-wise.
+
+[IMPORTANT]
+====
+To calculate the requested value when overcommitting memory, you can use the following formula:
+
+requested memory = VM memory * (100 / memoryOvercommitPercentage)
+
+16 * (100 / 200) = 8GiB
+
+or, with 150% overcommit
+
+16 * (100 / 150) = 10.66GiB
+====
+
+[NOTE]
+====
+Memory overhead per virtual machine ≈ (0.002 × requested memory) + 218 MiB + 8 MiB × (number of vCPUs) + 16 MiB × (number of graphics devices) + (additional memory overhead)
+
+Please see the section on https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/virtualization/installing#memory-overhead_preparing-cluster-for-virt[virtual machine memory overhead^] in the OpenShift Virtualization docs.
+====
+
+[[verifying_memory]]
+==== Verifying Memory Overcommit
+
+. Using the OpenShift console, select the *overcommit-vm-1* virtual machine in the *overcommit* namespace, and verify the current amount of memory assigned to the guest in the *Overview* pane.
++
+image::exercise2/vm-memory-assigned.png[title="VM Memory Assigned", link=self, window=blank, width=100%]
+
+. We can also verify this in the terminal to the right by running the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get vm -n over-commit overcommit-vm-1 -o json | jq .spec.template.spec.domain.memory
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+{
+  "guest": "2Gi"
+}
+----
+
+. Just like we did with CPU in the previous section, the amount of memory requested for a virtual machine can be located easily in the pod definition of the VM. To find this information we can select the pod name from the *General* field on the *Overview* of our VM in the OpenShift console.
++
+image::exercise2/vm-pod.png[title="VM Pod", link=self, window=blank, width=100%]
+
+. When you click on the pod name, you load the *Pod details* page. Click on the *YAML* tab and scroll down to the *spec:containers:resources:requests:memory* field.
++
+image::exercise2/pod-memory-request.png[title="Virt-Launcher Memory Request", link=self, window=blank, width=100%]
+
+. This can also be verified in the terminal to the right by running the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get pod -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1 -o json | jq '.items[0].spec.containers[0].resources.requests.memory'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+"2564Mi"
+----
++
+NOTE: The *virt-launcher* pod is requesting 2564MiB which is 2048MiB + **overhead** required to run the VM.
+
+[[enable_mem_overcommit]]
+==== Enable Memory Overcommit
+
+Now let's turn on Memory Overcommit for virtual machine workloads and see how that changes things.
+
+. In the left side navigation menu in the OpenShift Console click on *Overview* followed by the *Settings* tab. Expand the section for *General Settings* and finally expand the section for *Memory Density*.
++
+image::exercise2/enable-memory-overcommit.png[title="Enable Memory Overcommit", link=self, window=blank, width=100%]
+
+. Click the toggle for *Configure memory density* to enable it, use the slider to set it to 200%, and click the *Save* button.
++
+image::exercise2/configure-memory-overcommit.png[title="Enable Memory Overcommit", link=self, window=blank, width=100%]
+
+. We can now confirm memory overcommit is enabled by checking the *hyperconverged* CR using the CLI:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get hyperconverged -n openshift-cnv kubevirt-hyperconverged -o json | jq '.spec.higherWorkloadDensity.memoryOvercommitPercentage'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+200
+----
++
+NOTE: This means that the memory overcommit ratio is _200%_ which is _2:1_!
+
+. Now let's restart the VM and observe the memory request on the *virt-launcher* pod compared to the memory allocated to the VM.
++
+image::exercise2/vm-restart.png[title="VM Restart", link=self, window=blank, width=100%]
+
+. Return to the *Pod details* page by clicking on the pod name from the *General* field on the *Overview* of our VM in the OpenShift console.
++
+image::exercise2/vm-pod.png[title="VM Pod", link=self, window=blank, width=100%]
+
+. Click on the *YAML* tab and scroll down to the *spec:containers:resources:requests:memory* field as we did before.
++
+image::exercise2/virt-launcher-memory-request-overcommit.png[title="Virt-Launcher Memory Request 1.5x", link=self, window=blank, width=100%]
+
+. The *virt-launcher* pod is now only requesting _1540Mi_ which is  _1.5GiB_!
++
+NOTE: This is less than the _2048MiB_ utilized by the VM, and is basically 1/2 of the requested memory 1024MiB + **overhead** required to run the VM.
+
+. We can also increase the memory overcommit ratio by patching the *hyperconverged* custom resource on the command line.
+
+. Using the embedded terminal, use the following command to set the overcommit ratio to 400%:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc patch hyperconverged -n openshift-cnv kubevirt-hyperconverged --type merge -p '{"spec":{"higherWorkloadDensity":{"memoryOvercommitPercentage":400}}}'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+hyperconverged.hco.kubevirt.io/kubevirt-hyperconverged patched
+----
+
+. Now run the following command to validate that the change was effective.
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get hyperconverged -n openshift-cnv kubevirt-hyperconverged -o json | jq '.spec.higherWorkloadDensity.memoryOvercommitPercentage'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+400
+----
++
+NOTE: This means that the memory overcommit ratio is now _400%_ which is _4:1_.
+
+. Since we are already using the terminal, you can restart the VM and observe the memory request on the *virt-launcher* pod compared to the 2GiB allocated to the VM without having to change back to the OpenShift console. Restart the VM with the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+virtctl restart overcommit-vm-1 -n over-commit
+----
++
+[,shell,role=wrap,subs="attributes"]
+.Output
+----
+VM overcommit-vm-1 was scheduled to restart
+----
+
+. Once the VM has restarted, you can see what the current memory resource request is set to by running the following command:
++
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc get pod -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1 -o json | jq '.items[0].spec.containers[0].resources.requests.memory'
+----
++
+[,text,role=wrap,subs="attributes"]
+.Output
+----
+"1028Mi"
+----
++
+NOTE: This is less than the _2048MiB_ being utilized by the VM, and is basically 1/4 of the requested memory 512MiB + **overhead** required to run the VM.
+
+*Add section to exclude a vm, with user create a new vm then add comments to exclude me for over commit*
+
+Congratulations, you have completed the Resource Management exercises!
+
+Prior to moving on and to prevent any unexpected issues in the remainder of this lab, use the following command to reset the memory overcommit percentage back to 100%
+
+[,shell,role="execute wrap",subs="attributes"]
+----
+oc patch hyperconverged -n openshift-cnv kubevirt-hyperconverged --type merge -p '{"spec":{"higherWorkloadDensity":{"memoryOvercommitPercentage":100}}}'
+----
+
+Also, please shut down the *overcommit-vm-1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
+===
+
+=== Hot-Plug
+
+==== Introduction
+
+One of the benefits of running workloads on virtual machines is the fact that they are just that, virtual. When you consider the maintenance required to expand resources on a physical server, by upgrading a CPU or adding a few extra DIMMs to increase memory, you realize how advantageous it is to be running in a virtual server environment. The same goes for if you need increased disk drive space, or if you'd like to add an additional network interface. In OpenShift Virtualization each of these tasks can be achieved in a hot-plug manner, that is to say while the machine is running without any adverse effect on the applications running on the VM.
+
+.*Goals*
+
+* Increase the CPU and Memory of a running virtual machine.
+* Add a hotplug virtual disk to a running virtual machine.
+* Add a hotplug network interface (NIC) to a running virtual machine.
+
+[[cpu_mem]]
+==== Adding CPU and Memory to a Running VM
+
+In this exercise, we will add additional CPU and Memory resources to a Virtual Machine by changing the Virtual Machine's Instance Type. You will start with an existing VM that has a single vCPU and 2 GiB of memory, and modify it to have 2 vCPU and 4 GiB of memory.
+
+. Let's get started by powering on the *hot-plug-vm-1* virtual machine in the *hot-plug* namespace. Click on *VirtualMachines* then expand the *hot-plug* namespace and click on the VM. Once selected click the *Play* button to *Start* the virtual machine.
++
+image::exercise3/03-image-cpu-000.png[title="Start the VM", link=self, window=blank, width=100%]
+
+. While the VM is booting up make a note of the InstanceType which is *u1.small*, and the current *CPU | Memory* for this VM, which is *1 CPU | 2GiB Memory*
++
+image::exercise3/03-image-cpu-001.png[title="CPU and Memory before hot plug", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select *Details*, if it is not already selected. You can see that the InstanceType is *General Purpose* and also states that the VM has *1 CPU | 2GiB Memory*.
++
+image::exercise3/03-image-cpu-002.png[title="Virtual Machine details", link=self, window=blank, width=100%]
+
+. Click on the blue pencil icon to modify the CPU and Memory resources.
+
+. In the window that appears, click the *Size* drop down and select *2xmedium: 2CPUs, 4Gi Memory*.
++
+image::exercise3/03-image-cpu-003.png[title="Edit Instance Type", link=self, window=blank, width=100%]
+
+. The configuration in the *Details* panel will now show that the virtual machine now has 2 CPUs and 4 GiB of memory.
++
+image::exercise3/03-image-cpu-004.png[title="Virtual Machine details", link=self, window=blank, width=100%]
++
+NOTE: You may notice that the virtual machine live migrates at this stage, this is because it needs to redefine the pod definition to support the new higher resource request, but keeps the VM online during the process.
+
+. Click on the *Console* tab. If necessary, click the blue *Connect* button.
++
+image::exercise3/03-image-cpu-005.png[title="CPU and Memory messages", link=self, window=blank, width=100%]
+
+. Login to the Virtual Machine using *Copy to clipboard* and the *Paste to console* button with the *User name* and *Password* credentials that are provided.
++
+image::exercise3/03-image-cpu-006.png[title="Login to VM", link=self, window=blank, width=100%]
+
+. To validate that the VM now has 2 CPUs and 4GiB of memory, run the following:
++
+.Get the number of processors
+[source,text,role=execute]
+----
+nproc
+----
++
+.Get the amount of memory
+[source,text,role=execute]
+----
+free -m
+----
+
+. You will see that the VM has 2 CPUs and approximately 4 GiB of total memory.
++
+image::exercise3/03-image-cpu-007.png[title="Updated CPU and Memory", link=self, window=blank, width=100%]
++
+NOTE: You may notice that the amount of memory shown is actually less than 4GiB. This is because the VM image has kdump enabled, which reserves some memory for the kernel. If kdump were disabled, the total memory would be 4 GiB.
+
+[[add_disk]]
+==== Adding a Hotplug Disk to a Running VM
+
+In this exercise, we will hot add a new disk to an existing VM using the OpenShift console. You will start with an existing running VM that already has one or more disks configured, and add an additional one.
+
+. In the left side navigation menu click on *Virtualization*, expand the *hot-plug* namespace, and select the *hot-plug-vm1* virtual machine.
++
+image::exercise3/03-image-disk-001.png[title="hot-plug-vm1 details", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select *Storage*. You can see that the Virtual Machine currently has a single 30GB bootable disk that is using the *Storage class* called *ocs-external-storagecluster-ceph-rbd*.
++
+image::exercise3/03-image-disk-002.png[title="VM has only one disk", link=self, window=blank, width=100%]
+
+. Add an empty disk by clicking the *Add* button under *Disks* and then selecting *Empty disk (blank)*.
++
+image::exercise3/03-image-disk-003.png[title="Add an empty disk", link=self, window=blank, width=100%]
+
+. In the window that appears, give the new disk a name *data-disk-01* and change the size to 5 GiB. The rest of the options may remain at their defaults, and when ready click the *Save* button.
++
+image::exercise3/03-image-disk-004.png[title="Configure the new disk", link=self, window=blank, width=100%]
+
+. You can see that the new disk has been added with a label of *Persistent Hotplug*.
++
+image::exercise3/03-image-disk-005.png[title="The disk is added", link=self, window=blank, width=100%]
+
+. Click on the *Console* tab above and log into the virtual machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window. If necessary, click the blue *Connect* button to restart the console.
+
+. Run the *lsblk* command and you will see the new 5 GiB disk added as */dev/vdc*.
++
+image::exercise3/03-image-disk-007.png[title="View the new disk from the OS", link=self, window=blank, width=100%]
+
+. The new disk is hot-plugged to the virtual machine by way of a new pod that manages access to the disk. The new pod is created in the same project as the VM and is called *hp-volume-xxxxx*. This pod runs in addition to the *virt-launcher* pod that we explored in earlier modules.
+
+. To see the pod that is running alongside the virtual machine, return to the embedded terminal and run the following command:
++
+.Get a list of pods
+[source,text,role=execute]
+----
+oc get pods -n hot-plug
+----
++
+.Output
+----
+NAME                                READY   STATUS      RESTARTS   AGE
+NAME                               READY   STATUS      RESTARTS   AGE
+hp-volume-jgxbg                    1/1     Running     0          6m19s
+virt-launcher-hot-plug-vm1-8jlpw   2/2     Running     0          47m
+----
+
+. The *hp-volume* pod will stop if the VM is stopped and the pod will start again when the VM is started. The new disk can be used as any normal disk would be used and will persist even if the VM is stopped and started.
++
+NOTE: While we are not going to do it in this lab, you are perfectly able to create a filesystem on this new disk, mount it, and use it as needed.
+
+[[remove_hotplug]]
+==== Remove a Hotplugged Disk
+
+For this exercise we will remove the hot-plugged disk from the virtual machine.
+
+. Starting from the *Configuration* tab of the *hot-plug-vm1* virtual machine on the *Storage* sub-tab.
++
+image::exercise3/03-image-disk-010.png[title="Configuration and Storage Page", link=self, window=blank, width=100%]
+
+. Click on the three dots on the right side of the *hot-plugged* disk and select *Detach* from the menu that pops out.
++
+image::exercise3/03-image-disk-011.png[title="Detach the disk", link=self, window=blank, width=100%]
+
+. When prompted, complete the action by clicking on the *Detach* button.
++
+image::exercise3/03-image-disk-012.png[title="Confirm disk detach", link=self, window=blank, width=100%]
+
+. You will see the disk immediately disappear from the *Configuration* screen.
++
+image::exercise3/03-image-disk-013.png[title="Hotplug disk removed", link=self, window=blank, width=100%]
+
+. Return to the *Console* tab and log into the virtual machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window.
+
+. Run the *lsblk* command and you will see that the hot-plugged disk is no longer present on the system.
++
+image::exercise3/03-image-disk-014.png[title="Hotplug disk removed", link=self, window=blank, width=100%]
++
+NOTE: The detached disk still exists as a PVC. It can be re-attached, or attached to a different VM, or it can be deleted if it is no longer needed.
+
+. To confirm that the persistent disk still exists on the cluster, click on *Storage -> PersistentVolumeClaims* on the left side navigation menu. You will see the disk still listed in the *hot-plug* namespace alongside the standard boot disk.
++
+image::exercise3/03-image-disk-015.png[title="Disk is removed in OS", link=self, window=blank, width=100%]
+
+[[nic]]
+==== Adding a NIC to a Running VM
+
+In this exercise, we will add a new *Network Interface Card* (NIC) to an existing VM. You will start with an existing VM that has a single NIC on the pod network, and modify the configuration to include an additional NIC on a new network.
+
+. Click on *Virtualization* in the left side navigation menu, expand the *hot-plug* namespace, and click on the *hot-plug-vm1* virtual machine.
++
+image::exercise3/03-image-nic-001.png[title="Select the hot-plug-vm1", link=self, window=blank, width=100%]
+
+. Make a note of which compute node the VM is currently on, this will be important later.
++
+image::exercise3/03-image-nic-002.png[title="Identify the worker node", link=self, window=blank, width=100%]
+
+. Click on the *Configuration* tab and select the *Network* sub-tab, and note that the VM currently has a single NIC named *default* and attached to the *Pod networking* network.
++
+image::exercise3/03-image-nic-003.png[title="Single NIC only", link=self, window=blank, width=100%]
+
+. From this page you can add a new NIC by clicking on the *Add network interface* button.
+
+. In the new window that appears, provide a Name for the new interface, such as *nic-1*. The Model should be *virtio*, and the Network should be *hot-plug/east-west-nad* selected from the drop down menu. When you are ready, click the *Save* button.
++
+image::exercise3/03-image-nic-004.png[title="Add network interface", link=self, window=blank, width=100%]
+
+. What may surprise you since this is a hot-add procedure is that the status of nic-1 says *Pending* and a banner appears that says there are *Pending Changes*.
++
+image::exercise3/03-image-nic-005.png[title="View pending changes", link=self, window=blank, width=100%]
+
+. If you click on the *>* on the banner you can find out why this is the case. Note that the message indicates a *restart or migration* is required for the NIC addition to take effect.
+
+. Just as it was with modifying the CPU and Memory in the earlier section, the virtual machine will perform a live migration so that new resources can be added to the pod.
++
+NOTE: The process may take just a minute or two, but you will notice the *Pending* status and the banner goes away, and *nic-1* is now connected.
++
+image::exercise3/03-image-nic-006.png[title="nic-1 connected", link=self, window=blank, width=100%]
+
+. If you return to the *Overview* tab, you can observe in the *General* area that the VM now resides on a different worker node.
++
+image::exercise3/03-image-nic-007.png[title="Different worker node", link=self, window=blank, width=100%]
+
+. Click on the *Console* tab, and log into the Virtual Machine using *Copy to clipboard* and *Paste to console* with the *User name* and *Password* credentials from above the console window.
++
+NOTE: You may see messages on the console when you first view it that show the new NIC being added.
++
+image::exercise3/03-image-nic-008.png[title="Log into VM console", link=self, window=blank, width=100%]
+
+. You can view the new NIC from the operating system by running the command *ip address* on the console.
+
+. The new NIC is listed as *enp3s0* and is receiving an IP address from the 192.168.20.0/24 subnet.
++
+image::exercise3/03-image-nic-009.png[title="New NIC is up", link=self, window=blank, width=100%]
++
+NOTE: It's possible that the newly added network adapter is assigned another name by the OS, e.g. enp2s0, this is perfectly fine.
+
+Congratulations, you have completed the Hot-Plug exercises!
+
+IMPORTANT: At the end of this module be sure to shut down the virtual machine *hot-plug-vm-1* that we were working with in order to conserve lab resources for future modules.
+
+=== Affinity
+
+==== Introduction
+
+Affinity and Anti-affinity are a set of rules that allow us to select where a virtual machine can be placed by the Kubernetes scheduler when it is deployed. In many cases these rules are defined to ensure that two interdependent workloads are not placed on the same node through anti-affinity rules. Think of an application that may have two frontend web servers and a backend database server with traffic load balanced evenly to the web servers. You would not want both of those VMs placed on the same node. Should an issue happen with the host system, the entire virtual application would be affected. By setting both affinity and anti-affinity rules for the placement of VMs, we can ensure situations like this don't happen.
+
+.*Goals*
+
+* Understand how node affinity can help you deterministically schedule where your VMs are placed.
+* Understand how pod affinity rules can help workloads with co-dependencies be scheduled together for better performance.
+* Understand how pod anti-affinity rules can ensure that workloads are segregated to provide high availability and increase fault tolerance.
+
+[[node_affinity]]
+==== Node Affinity
+
+Node Affinity is a set of rules that guide the scheduler to attract a Virtual Machine to a specific node or group of nodes. These rules rely on matching labels that are applied to the nodes.
+
+The core use case for Node Affinity is to ensure that a VM runs only on nodes that possess specific features or needs, such as a particular GPU model or a high amount of RAM, by matching the corresponding labels on the node.
+
+This lab will demonstrate how Node Affinity is set up and how it functions.
+
+. To get started, select *Virtualization* from the left side navigation menu and expand the *node-affinity* namespace. You will see that it contains three virtual machines. For the time being select the *node-affinity-vm* virtual machine, and start it by pressing the *Play* button or using the *Actions* menu.
++
+image::exercise4/04-start-node-affinity.png[title="Start node affinity VM", link=self, window=blank, width=100%]
+
+. Verify that the virtual machine is running and determine what node it is running on by checking the *General* section of the *Overview* tab.
++
+image::exercise4/04-check-node-affinity.png[title="Check what node the VM is on", link=self, window=blank, width=100%]
+
+. To test affinity we want to set a label, for example `zone=east` on any node where the *node-affinity-vm* is currently *not* running.
+
+. From the left side navigation panel, navigate to *Compute → Nodes*, and pick a worker node where the *node-affinity-vm* is not running, click the 3 dots and select *Edit labels*.
++
+image::exercise4/04-image-affinity-v2.png[title="Edit Node Labels", link=self, window=blank, width=100%]
++
+NOTE: In the example screenshots the VM was running on *worker-cluster-bj7mh-1*, so we are editing the labels on *worker-cluster-bj7mh-2*.
+
+. In the new window, enter *zone=east* and click *Save*
++
+image::exercise4/04-image-affinity-labels.png[title="Add Label", link=self, window=blank, width=100%]
+
+. To confirm that the label was applied click on the node where you added the label, click the *Details* tab and check the *Labels* section for *zone=east*.
++
+image::exercise4/04-image-affinity-check-labels.png[title="Check the Label", link=self, window=blank, width=100%]
+
+. There are often a lot of labels assigned in effect on an OpenShift node, so it may be best once on this page to use *Ctrl+f* in your browser and search for *zone=east*.
++
+image::exercise4/04-image-affinity-ctrl-f.png[title="Search for the Label", link=self, window=blank, width=100%]
+
+. Click on *Virtualization* in the left side navigation menu and select the *affinity* namespace and click on the virtual machine named *node-affinity-vm* and once selected click the *Configuration* tab.
++
+image::exercise4/04-image-affinity01.png[title="Node Affinity Navigation", link=self, window=blank, width=100%]
+
+. From the *Configuration* tab, select *Scheduling* and click the *blue pencil* icon under *Affinity rules* to add a new one.
++
+image::exercise4/04-image-affinity02.png[title="Node Affinity edit", link=self, window=blank, width=100%]
+
+. On the new screen that appears click *Add affinity rule*.
++
+image::exercise4/04-image-affinity02a.png[title="Node Affinity add rule", link=self, window=blank, width=100%]
+
+. Change the *Condition* to *Preferred during scheduling* and set the *weight* to *75*. Under *Node Labels* click *Add Expression* and set the *Key* field to `zone` and the *Values* field to `east` and click *Add*. When done editing, click the *Save affinity rule* button.
++
+image::exercise4/04-image-affinity03.png[title="Node Affinity Rule", link=self, window=blank, width=100%]
++
+NOTE: You will see a prompt that there is a node matching this rule, which is the node we labeled earlier.
+
+. You will be returned to the previous prompt with the Affinity rule defined. Click the *Apply rules* button.
++
+image::exercise4/04-image-affinity03a.png[title="Node Affinity Rule", link=self, window=blank, width=100%]
+
+. Without an external force to move or restart the VM, new Affinity rules do not take effect. To apply the changes manually, you can live migrate or restart the VM. For automatic enforcement, you can configure the *Descheduler* with the *AffinityAndTaints* profile.
+
+. Restart the *node-affinity-vm* VM using either the *restart* button or the *Actions* menu.
++
+image::exercise4/04-restart-vm.png[title="Restart the VM", link=self, window=blank, width=100%]
+
+. Once the VM restarts, it will be running on the node with the affinity label. To validate this click on the *Overview* tab, and check the *General* section on that page. The VM should be scheduled on the node where the label was applied earlier in this section.
++
+image::exercise4/04-vm-affinity-verified.png[title="VM Affinity Verified", link=self, window=blank, width=100%]
+
+[[pod_affinity]]
+==== Pod Affinity
+
+Pod Affinity is a scheduling rule that co-locates a VMs (or pods) with specific labels onto the same node.
+
+The primary benefit of using pod affinity is to improve performance for dependent VMs or services that require low-latency communication by guaranteeing their placement on the same node.
+
+This section of the lab will demonstrate the setup and usage of Pod Affinity.
+
+NOTE: This section of the lab will use the embedded terminal and a number of CLI commands to perform advanced operations on virtual machine pods and worker nodes.
+
+. To begin, we are going to leverage our existing *node-affinity-vm* from the previous lab. This will serve as 1 of the 2 VMs we use to demonstrate Affinity.
+
+. There are 2 ways to add a label:
+.. Editing the VM YAML from the CLI or Console
+.. Using *oc label*
+
+. Both methods have benefits and drawbacks. In many production use cases, they will be used together.
+.. Editing the VM YAML requires a restart of the VM for the new labels to take effect. This is because the label on the VM must get passed down to the *virt-launcher* pod and that only happens after a restart.
+.. Using *oc label* is ephemeral and is lost after a VM restart. This is because the label is applied directly to the *virt-launcher* pod, with immediate effect, but not set on the VM object.
+
+. To make things permanent, we will use the embedded terminal to run some OpenShift CLI commands to set a label `app: fedora` on the *node-affinity-vm*.
+
+. Add the label under *spec.template.metadata.labels* NOT *metadata.labels* at the top of the YAML:
++
+[source,text,role=execute]
+.Modify the VM
+----
+oc edit vm node-affinity-vm -n affinity
+----
++
+[source,yaml,subs="attributes"]
+----
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  annotations:
+    kubemacpool.io/transaction-timestamp: "2026-01-16T18:46:28.5004163Z"
+  generation: 3
+  labels:
+    app.kubernetes.io/instance: module-affinity  *<---Do not put the label here*
+  name: node-affinity-vm
+  namespace: affinity
+  resourceVersion: "714752"
+  uid: 5cf5a3d2-203c-41cb-8da2-d696acd9e71a
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      creationTimestamp: null
+      name: node-affinity-vm-volume
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: rhel10
+        namespace: openshift-virtualization-os-images
+      storage:
+        resources:
+          requests:
+            storage: 30Gi
+  instancetype:
+    kind: virtualmachineclusterinstancetype
+    name: u1.small
+  preference:
+    kind: virtualmachineclusterpreference
+    name: rhel.10
+  runStrategy: Manual
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: fedora *<---Put the label here* <1>
+        network.kubevirt.io/headlessService: headless
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: zone
+                operator: In
+                values:
+                - east
+            weight: 75
+      architecture: amd64
+      domain:
+        devices:
+          autoattachPodInterface: false
+          disks:
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - macAddress: 02:f9:4a:ad:c3:06
+            masquerade: {}
+            name: default
+        firmware:
+          serial: 212f42c0-c2ac-4581-96e2-5297e2436a8d
+          uuid: ad3a3d79-9539-4585-826e-9cca5a71f775
+        machine:
+          type: pc-q35-rhel9.6.0
+        resources: {}
+      networks:
+      - name: default
+        pod: {}
+      subdomain: headless
+      volumes:
+      - dataVolume:
+          name: node-affinity-vm-volume
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |
+            chpasswd:
+              expire: false
+            password: redhat
+            user: rhel
+        name: cloudinitdisk
+----
++
+.Save and Exit
+[source,console]
+----
+:wq!
+----
+
+. Make sure the VM was edited successfully and did not fail for any reason.
++
+[source,console]
+----
+virtualmachine.kubevirt.io/node-affinity-vm edited
+----
+
+. Restart the *node-affinity-vm* so the label is applied to the *virt-launcher* pod.
++
+[.wrap,console,role=execute]
+----
+virtctl restart node-affinity-vm -n affinity
+----
++
+[source,console]
+----
+VM node-affinity-vm was scheduled to restart
+----
+
+. Next, we are going to configure the *pod-affinity-vm*, we must begin by starting it up. Use the following CLI command to do so:
++
+[.wrap,console,role=execute]
+----
+virtctl start pod-affinity-vm -n affinity
+----
++
+[source,console]
+----
+VM pod-affinity-vm was scheduled to start
+----
+
+. Verify that the *VirtualMachineInstance* is running and see what node it is running on.
++
+[.wrap,console,role=execute]
+----
+oc get vmi -n  affinity pod-affinity-vm
+----
++
+.Output
+----
+NAME               AGE    PHASE     IP             NODENAME                        READY
+pod-affinity-vm    36s    Running   10.234.0.63    worker-cluster-bj7mh-1          True
+----
+
+. Once the VM has started, using the OpenShift console, from the left side navigation panel, navigate to *VirtualMachines*, select the *affinity* namespace, click on the virtual machine named *pod-affinity-vm* and click on the *Configuration* tab.
++
+image::exercise4/04-image-affinity04.png[title="Pod-affinity-vm Configuration", link=self, window=blank, width=100%]
+
+. From the *Configuration* tab, select *Scheduling* and click the *blue pencil* icon under *Affinity rules* to add a new one. When the new window appears click on the *Add affinity rule* button.
++
+image::exercise4/04-image-affinity04a.png[title="Pod Affinity Rule", link=self, window=blank, width=100%]
+
+. Change the *Type* to *Workload (pod) Affinity*, and keep the *Condition* set to *Required during scheduling* and leave the *Topology key* at the default value.
+
+. Click *Add expression* under *Workload labels* and set the *Key* field to `app` and the *Values* field to `fedora` and click *Add*.
++
+NOTE: This is the same label applied to the *node-affinity-vm* earlier through the CLI commands.
+
+. When complete your final pod affinity rule will look like the picture below. When ready to proceed, click the *Save affinity rule* button.
++
+image::exercise4/04-image-affinity05.png[title="Pod Affinity Rule", link=self, window=blank, width=100%]
+
+. When you are returned to the original window, click *Apply rules*
++
+image::exercise4/04-image-affinity08.png[title="Pod Affinity Rule", link=self, window=blank, width=100%]
+
+. Now let's take a look at the Pod Affinity rule on *pod-affinity-vm*. Return to the embedded terminal and run the following command:
++
+[source,text,role=execute]
+----
+oc get vm pod-affinity-vm -n affinity -o jsonpath='{.spec.template.spec.affinity}{"\n"}'
+----
++
+.Output
+----
+{"podAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"app","operator":"In","values":["fedora"]}]},"topologyKey":"kubernetes.io/hostname"}]}}
+----
+
+. With the affinity applied, let's check where the *pod-affinity-vm* and *node-affinity-vm* are running by looking at OpenShift Console or using the OpenShift CLI. On the embedded terminal run the following command:
++
+[source,text,role=execute]
+----
+oc get vmi pod-affinity-vm node-affinity-vm -n affinity
+----
++
+.Output
+----
+NAME               AGE    PHASE     IP             NODENAME                        READY
+pod-affinity-vm    15m    Running   10.234.0.63    worker-cluster-bj7mh-1          True
+node-affinity-vm   16m    Running   10.233.0.77    worker-cluster-bj7mh-2          True
+----
++
+NOTE: As we noted in the last section of this module, without an external force to move or restart the VM, the new affinity rules do not take effect.
+
+. Restart the *pod-affinity-vm* VM with the following CLI command:
++
+[.wrap,console,role=execute]
+----
+virtctl restart pod-affinity-vm -n affinity
+----
++
+[source,console]
+----
+VM pod-affinity-vm was scheduled to restart
+----
+
+. Once the VM has been restarted, the pod affinity will be in effect. We can validate this by running the `oc get vmi` command again on the embedded terminal:
++
+[source,text,role=execute]
+----
+oc get vmi pod-affinity-vm node-affinity-vm -n affinity
+----
++
+.Output
+----
+NAME               AGE    PHASE     IP            NODENAME                 READY
+pod-affinity-vm    67s    Running   10.233.0.78   worker-cluster-bj7mh-2   True
+node-affinity-vm   19m    Running   10.233.0.77   worker-cluster-bj7mh-2   True
+----
+
+. You will now see the *pod-affinity-vm* running on the same node *node-affinity-vm* because of the pod affinity rule pairing the two together.
+
+[[pod_antiaffinity]]
+==== Pod Anti-Affinity
+
+Pod Anti-Affinity is a crucial feature in achieving cross-cluster High Availability (HA) for your workloads. It works by instructing the scheduler to prevent the co-location of related VMs on the same node.
+
+The primary benefit is to enhance application resilience. It ensures that VMs belonging to the same service (such as a database cluster) are distributed across different nodes. The failure of a single node will not cause an outage for the entire service.
+
+This portion of the module will demonstrate the setup and usage of Pod Anti-Affinity.
+
+. To begin, we are going to leverage our existing *node-affinity-vm* and the *app: fedora* label from the previous lab. This will serve as 1 of the 2 VMs we use to demonstrate Anti-Affinity.
+
+. Next, we are going to configure the *pod-anti-affinity-vm*, let's begin by starting it up with either the OpenShift console, or the CLI on the embedded terminal:
++
+[.wrap,console,role=execute]
+----
+virtctl start pod-anti-affinity-vm -n affinity
+----
++
+[source,console]
+----
+VM pod-anti-affinity-vm was scheduled to start
+----
+
+. Verify the *VirtualMachineInstance* is running and see what node it is running on.
++
+[.wrap,console,role=execute]
+----
+oc get vmi pod-anti-affinity-vm -n affinity
+----
++
+.Output
+----
+NAME                   AGE   PHASE     IP            NODENAME                 READY
+pod-anti-affinity-vm   30s   Running   10.234.0.64   worker-cluster-bj7mh-1   True
+----
+
+. Once the VM has started, using the OpenShift console, from the left side navigation panel, navigate to *VirtualMachines*, select the *affinity* namespace, click on the virtual machine named *pod-anti-affinity-vm* and click on the *Configuration* tab.
++
+image::exercise4/04-image-affinity09.png[title="Pod-anti-affinity-vm Configuration", link=self, window=blank, width=100%]
+
+. From the *Configuration* tab, select *Scheduling* and click the *blue pencil* icon under *Affinity rules* to add a new one. When the new window appears click on the *Add affinity rule* button.
++
+image::exercise4/04-image-affinity06.png[title="Add Pod Anti-Affinity Rule", link=self, window=blank, width=100%]
+
+. Change the *Type* to *Workload (pod) Anti-Affinity*, and keep the *Condition* set to *Required during scheduling* and leave the *Topology key* at the default value.
+
+. Click *Add expression* under *Workload labels* and set the *Key* field to `app` and the *Values* field to `fedora` and click *Add*.
++
+NOTE: This is the same label applied to the the previous two VMs.
+
+. Your final pod affinity rule will look like the picture below, once satisfied click the *Save affinity rule* button.
++
+image::exercise4/04-image-affinity07.png[title="Add Pod Anti-Affinity Rule", link=self, window=blank, width=100%]
+
+. When you are returned to the original prompt click the *Apply Rules* button.
+
+. Now let's take a look at the pod anti-affinity rule on *pod-anti-affinity-vm*.
+
+. Return to the embedded terminal and run the following command to see the settings:
++
+[source,text,role=execute]
+----
+oc get vm pod-anti-affinity-vm -n affinity -o jsonpath='{.spec.template.spec.affinity}{"\n"}'
+----
++
+.Output
+----
+{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"app","operator":"In","values":["fedora"]}]},"topologyKey":"kubernetes.io/hostname"}]}}
+----
+
+. Confirm where the *pod-anti-affinity-vm* and *node-affinity-vm* are running by looking at OpenShift Console or using the OpenShift CLI.
++
+[source,text,role=execute]
+----
+oc get vmi pod-anti-affinity-vm node-affinity-vm -n affinity
+----
++
+.Output
+----
+NAME                   AGE   PHASE     IP            NODENAME                 READY
+pod-anti-affinity-vm   12m   Running   10.234.0.64   worker-cluster-bj7mh-1   True
+node-affinity-vm       33m   Running   10.233.0.77   worker-cluster-bj7mh-2   True
+----
++
+NOTE: It's possible your *pod-anti-affinity-vm* and *node-affinity-vm* are already on different nodes because the cluster is lightly loaded. Even so, you can restart the pods endlessly and they never will end up on the same node.
+
+. As we noted in the previous sections, without an external force to move or restart the VM, new Affinity rules do not take effect. To apply the changes manually, you can live migrate or restart the VM. For automatic enforcement, you can configure the *Descheduler* with the *AffinityAndTaints* profile.
+
+. Restart the *pod-anti-affinity-vm* VM using the following command:
++
+[.wrap,console,role=execute]
+----
+virtctl restart pod-anti-affinity-vm -n affinity
+----
++
+[source,console]
+----
+VM pod-anti-affinity-vm was scheduled to restart
+----
+
+. Once the VM restarts, the pod anti-affinity will be in effect, and this VM will not be allowed to occupy the same node as the *node-affinity-vm* virtual machine.
+
+. You can validate this in the GUI by navigating to the *pod-anti-affinity-vm* and *node-affinity-vm*, and looking at the *Node* name in the *General* box on the right side of the *Overview* tab or by using the OCP CLI on the embedded terminal.
++
+[source,text,role=execute]
+----
+oc get vmi pod-anti-affinity-vm node-affinity-vm -n affinity
+----
+.Output
+----
+NAME                   AGE   PHASE     IP            NODENAME                        READY
+pod-anti-affinity-vm   109s   Running   10.234.0.65   worker-cluster-bj7mh-1   True
+node-affinity-vm       37m    Running   10.233.0.77   worker-cluster-bj7mh-2   True
+----
+
+Congratulations, you have completed the Affinity exercises!
+
+IMPORTANT: Stop the *node-affinity-vm*, *pod-affinity-vm*, and *pod-anti-affinity-vm* VMs from this module to ensure that there are enough resources to continue for the next module
+
+=== Descheduler
+
+==== Introduction
+
+In Kubernetes, on which OpenShift is based, the default behavior when a node starts to feel pressure from a lack of physical resources (CPU/Memory) is to kill running workloads to free up those resources. It does this by using the kube-descheduler to evict pods and have them rescheduled on other nodes with more free resources.
+
+In the case of a containerized application with many replicas this often isn't a problem, but in the case of a virtual machine which is a stateful workload, this behavior can lead to serious issues.
+
+With OpenShift Virtualization, we handle the eviction process gracefully through the *virt-api-validator validating webhook*. This webhook intercepts all eviction requests and makes a series of decisions on how to treat the request. If the eviction request is received for a virtual machine that has the ability to live migrate, then that less-destructive option is taken.
+
+For more information on how this works, please see the following link: https://github.com/kubevirt/kubevirt/blob/main/docs/handling-eviction-requests.md[How Evictions are Handled in OpenShift Virtualization^]
+
+You can benefit from descheduling running pods in situations such as the following:
+
+* Nodes are underutilized or overutilized.
+* Pod and node affinity requirements, such as taints or labels, have changed and the original scheduling decisions are no longer appropriate for certain nodes.
+* Node failure requires pods to be moved.
+* New nodes are added to clusters.
+* Pods have been restarted too many times.
+
+.*Goals*
+
+* Understand the use of the *Kube-Descheduler* using the *KubeVirtRelieveAndMigrate* profile to keep virtual workloads alive.
+* Discover how to edit the configuration of the *Kube-Descheduler* to change its functionality, and its eviction interval.
+
+[[dynamic_resch_req]]
+==== Prerequisites
+
+* Descheduler Operator is installed
+* The *KubeVirtRelieveAndMigrate* profile is configured
+* PSI metrics are enabled on all worker nodes
+
+For your convenience, all of the requirements are already enabled in the lab.
+
+NOTE: PSI (Pressure Stall Information) is a Linux kernel feature that measures and reports the time tasks spend waiting for CPU, memory, or I/O resources, providing visibility into resource contention and saturation. It quantifies how much time processes are stalled waiting for resources, helping identify performance bottlenecks by showing what percentage of time your system is under pressure from insufficient resources.
+
+[[dynamic_resch_demo]]
+==== Demonstrating Dynamic Scheduling
+
+NOTE: The following module contains advanced actions performed in the OpenShift CLI, please ensure you are logged into your cluster in the embedded terminal to the right.
+
+. Let's begin this module by starting the *dynamic-schedule-vm1* virtual machine found in the *dynamic-schedule* namespace. This can be done either through the OpenShift console, or through the CLI in the embedded console with the following command:
++
+[.wrap,console,role=execute]
+----
+virtctl start dynamic-schedule-vm-1 -n dynamic-schedule
+----
++
+[source,console]
+----
+VM dynamic-schedule-vm-1 was scheduled to start
+----
+
+. Check the name of the virtual machine that is running in the *dynamic-schedule* namespace with the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc get vmi -n dynamic-schedule
+----
++
+[source,console]
+----
+NAME                    AGE     PHASE     IP             NODENAME                        READY
+dynamic-schedule-vm-1   2m41s   Running   10.232.0.240   control-plane-cluster-jlkcx-1   True
+----
+
+. Run the following command in the embedded terminal to observe the Kube-Descheduler operator configuration:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n openshift-kube-descheduler-operator get kubedescheduler cluster -o yaml
+----
++
+[source,yaml,role="wrap",subs="attributes"]
+----
+apiVersion: operator.openshift.io/v1
+kind: KubeDescheduler
+metadata:
+  name: cluster
+  namespace: openshift-kube-descheduler-operator
+spec:
+  logLevel: Normal
+  mode: Predictive
+  operatorLogLevel: Normal
+  profileCustomizations:
+    devEnableSoftTainter: true
+    devDeviationThresholds: AsymmetricLow
+    devActualUtilizationProfile: PrometheusCPUCombined
+  profiles:
+    - KubeVirtRelieveAndMigrate
+  # This is the interval at which the descheduler will run ; Set a lower value for testing purposes :
+  deschedulingIntervalSeconds: 3600
+  managementState: Managed
+----
++
+NOTE: By default, the mode is set to *Predictive* which means it only *simulates and logs* potential pod evictions. It does *not* actually perform any evictions. To *enable eviction*, set the mode to *Automatic*.
++
+. Ensure the descheduler pod is running and check the logs in the *openshift-kube-descheduler-operator* namespace to confirm with the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc logs -n openshift-kube-descheduler-operator -l app=descheduler
+----
++
+[,shell,subs="attributes"]
+.Output
+----
+I0102 13:57:26.543545       1 lownodeutilization.go:210] "Node has been classified" category="underutilized" node="worker-cluster-jlkcx-2" usage={"MetricResource":"4"} usagePercentage={"MetricResource":4}
+I0102 13:57:26.543656       1 lownodeutilization.go:210] "Node has been classified" category="underutilized" node="worker-cluster-jlkcx-1" usage={"MetricResource":"5"} usagePercentage={"MetricResource":5}
+I0102 13:57:26.543667       1 lownodeutilization.go:236] "Node is appropriately utilized" node="control-plane-cluster-jlkcx-1" usage={"MetricResource":"13"} usagePercentage={"MetricResource":13}
+I0102 13:57:26.543674       1 lownodeutilization.go:248] "Criteria for a node under utilization" MetricResource="0.00%"
+I0102 13:57:26.543687       1 lownodeutilization.go:249] "Number of underutilized nodes" totalNumber=2
+I0102 13:57:26.543694       1 lownodeutilization.go:250] "Criteria for a node above target utilization" MetricResource="10.00%"
+I0102 13:57:26.543704       1 lownodeutilization.go:251] "Number of overutilized nodes" totalNumber=0
+I0102 13:57:26.543709       1 lownodeutilization.go:275] "All nodes are under target utilization, nothing to do here"
+I0102 13:57:26.543786       1 profile.go:376] "Total number of evictions/requests" extension point="Balance" evictedPods=0 evictionRequests=0
+I0102 13:57:26.543827       1 descheduler.go:403] "Number of evictions/requests" totalEvicted=0 evictionRequests=0
+----
+
+. Now we are going to deploy a stress test pod in order to demonstrate the functionality of the *Kube-Descheduler*. We do so by patching the existing *stress-test* deployment to use a *nodeSelector* so that the pod runs on the node where the VM is running.
+
+. We do this by setting the *nodeSelector* key *kubernetes.io/hostname* dynamically by:
+.. Listing all of the nodes in the cluster.
+.. Filtering the results on the specific node where the *dynamic-schedule-vm-1* virtual machine is running.
+
+. In order to perform these actions, run the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n dynamic-schedule-stress-test patch deployment stress-test --type merge -p "{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"$(oc get nodes -o custom-columns=":metadata.name" --no-headers | grep $(oc get vmi dynamic-schedule-vm-1 -n dynamic-schedule -o json | jq -r '.status.nodeName'))\"}}}}}"
+----
+
+. To increase the stress on the node we now need to scale the deployment. Do so with the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n dynamic-schedule-stress-test scale deployment stress-test --replicas=1
+----
+
+. Use the following command to verify that the pod is running:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc get pods -n dynamic-schedule-stress-test -o wide
+----
+
+. If you recall from the configuration earlier, the default descheduling interval is to assess the status of the cluster every 10 minutes. For the purposes of this lab, we want to decrease that interval so that we can observe it perform the descheduling action.
+
+. We can edit the kubedescheduler cluster resource to set the *deschedulingIntervalSeconds* to a lower value with the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n openshift-kube-descheduler-operator patch kubedescheduler cluster --type merge -p '{"spec":{"deschedulingIntervalSeconds":5}}'
+----
+
+. With the interval shortened to 5 seconds, we may now be able to observe the evictions take place. View the descheduler pod logs in the *openshift-kube-descheduler-operator* namespace with the following command:
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc logs -f -n openshift-kube-descheduler-operator -l app=descheduler
+----
++
+[source,console]
+----
+I1113 15:24:57.371043       1 lownodeutilization.go:261] "Number of overutilized nodes" totalNumber=1
+I1113 15:24:57.371052       1 nodeutilization.go:174] "Total capacity to be moved" MetricResource=143
+I1113 15:24:57.371273       1 nodeutilization.go:189] "Pods on node" node="worker01" allPods=72 nonRemovablePods=45 removablePods=27
+I1113 15:30:00.673653       1 nodeutilization.go:205] "Evicting pods based on priority, if they have same priority, they'll be evicted based on QoS tiers"
+I1113 15:30:00.673755       1 evictions.go:551] "Evicted pod in dry run mode" pod="dynamic-schedule/virt-launcher-dynamic-schedule-vm-1-lltlv" reason="" strategy="LowNodeUtilization" node="worker01" profile="DevKubeVirtRelieveAndMigrate"
+----
++
+NOTE: We can see that the *virt-launcher-dynamic-schedule-vm-1-lltlv* pod would have been evicted but the *Descheduler* was in *dry run* or *Predictive* mode.
+
+. To actually allow the descheduler to evict the pods, we need to set the *Descheduler* mode to *Automatic*. We can do so with the following command:
++
+[.wrap,console,role="execute",subs="attributes"]
+----
+oc -n openshift-kube-descheduler-operator patch kubedescheduler cluster --type merge -p '{"spec":{"mode":"Automatic"}}'
+----
+
+. Let's verify the descheduler pod logs in the *openshift-kube-descheduler-operator* namespace one more time.
++
+[.wrap,console,role="execute",subs="attributes"]
+----
+oc logs -f -n openshift-kube-descheduler-operator -l app=descheduler
+----
++
+[,shell,subs="attributes"]
+.Output
+----
+I0102 14:53:47.976452       1 lownodeutilization.go:251] "Number of overutilized nodes" totalNumber=1
+I0102 14:53:47.976473       1 nodeutilization.go:185] "Total capacity to be moved" MetricResource=79
+I0102 14:53:47.976924       1 nodeutilization.go:200] "Pods on node" node="worker-cluster-jlkcx-2" allPods=44 nonRemovablePods=31 removablePods=13
+I0102 14:53:47.976946       1 nodeutilization.go:216] "Evicting pods based on priority, if they have same priority, they'll be evicted based on QoS tiers"
+I0102 14:53:47.977036       1 profile.go:376] "Total number of evictions/requests" extension point="Balance" evictedPods=0 evictionRequests=0
+I0102 14:53:47.977065       1 descheduler.go:403] "Number of evictions/requests" totalEvicted=0 evictionRequests=0
+I0102 14:53:52.963035       1 lownodeutilization.go:210] "Node has been classified" category="overutilized" node="control-plane-cluster-jlkcx-1" usage={"MetricResource":"10"} usagePercentage={"MetricResource":10}
+I0102 14:53:52.963113       1 lownodeutilization.go:210] "Node has been classified" category="underutilized" node="worker-cluster-jlkcx-1" usage={"MetricResource":"7"} usagePercentage={"MetricResource":7}
+I0102 14:53:52.963143       1 lownodeutilization.go:210] "Node has been classified" category="underutilized" node="worker-cluster-jlkcx-2" usage={"MetricResource":"100"} usagePercentage={"MetricResource":100}
+----
++
+NOTE: We can see that we have one overutilized node where the stress-test pod is running. Because of this the VM will be migrated to another node.
+
+. We can confirm that the pods are evicted and rescheduled on another node (using the *-w* "watch" parameter as it can take some time for the eviction to happen)
++
+[.wrap,console,role="execute",subs="attributes"]
+----
+oc get pods -n dynamic-schedule -o wide -w
+----
++
+[source,console]
+.Output
+----
+NAME                                        READY   STATUS      RESTARTS   AGE     IP             NODE                            NOMINATED NODE   READINESS GATES
+virt-launcher-dynamic-schedule-vm-1-lltlv   0/2     Completed   0          31m     10.232.0.240   control-plane-cluster-jlkcx-1   <none>           1/1
+virt-launcher-dynamic-schedule-vm-1-n6ct7   2/2     Running     0          2m37s   10.234.0.84    worker-cluster-jlkcx-2          <none>           1/1
+----
+
+. To confirm that the kube-descheduler is working, move the stress test pod to the new node where the VM is now running and repeat the last few steps to watch it move again.
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n dynamic-schedule-stress-test patch deployment stress-test --type merge -p "{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"$(oc get nodes -o custom-columns=":metadata.name" --no-headers | grep $(oc get vmi dynamic-schedule-vm-1 -n dynamic-schedule -o json | jq -r '.status.nodeName'))\"}}}}}"
+----
+
+. The command we just executed will patch the configuration of the *stress-test* deployment by changing the *nodeSelector* which will trigger a new rollout onto the node where the *dynamic-schedule-vm-1* VM is running. The VM will then be evicted and live migrate to another available node.
++
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc get pods -n dynamic-schedule -o wide -w
+----
++
+[,shell,subs="attributes"]
+.Output
+----
+NAME                                        READY   STATUS      RESTARTS   AGE     IP             NODE                            NOMINATED NODE   READINESS GATES
+virt-launcher-dynamic-schedule-vm-1-4qhnq   2/2     Running     0          4m28s   10.232.1.70    control-plane-cluster-jlkcx-1   <none>           1/1
+virt-launcher-dynamic-schedule-vm-1-n6ct7   0/2     Completed   0          9m49s   10.234.0.84    worker-cluster-jlkcx-2          <none>           1/1
+----
+
+Congratulations, you have completed the Descheduler exercises!
+
+IMPORTANT: Scale down the *dynamic-schedule-stress-test* deployment and stop the *dynamic-schedule-vm-1* VM using *virtctl* from your *Terminal* window to ensure you have enough resources for the next labs.
+
+[.wrap,console,role=execute,subs="attributes"]
+----
+oc -n dynamic-schedule-stress-test scale deployment stress-test --replicas=0
+----
+
+[,shell,role="execute wrap",subs="attributes"]
+----
+virtctl stop dynamic-schedule-vm-1 -n dynamic-schedule
+----
 
 === Fencing (Module 11)
 
-Fencing mechanisms detect unhealthy nodes and trigger automatic remediation:
+==== Introduction
 
-* Configuring node health checks
-* Simulating and recovering from node failures
-* Fencing strategies for high availability
-* Monitoring fencing events
+Fencing is a vital mechanism that safeguards cluster resources and ensures data integrity. It works by isolating an unresponsive or failed node and evacuating all workloads in a timely manner. This process is crucial to prevent the "split-brain" scenario, which occurs when multiple nodes try to write to shared storage simultaneously, inevitably leading to data corruption.
 
-xref:11-fencing.adoc[→ Go to Fencing module]
+This lab demonstrates the capabilities of the *Node Health Check Operator* and the *Self Node Remediation Operator*. You will simulate a node failure to observe the virtual machine migration process and subsequent node recovery.
 
-=== Real World Scaling (Module 07)
+.*Goals*
 
-This module applies multiple concepts in realistic production scenarios:
+* Understand how to configure a nodeHealthCheck policy.
+* Understand how fencing a node works during a simulated failure scenario.
 
-* Examining resource utilization on running VMs
-* Horizontally scaling VM resources
-* Vertically scaling VM resources
-* Adding nodes to the cluster
-* Understanding swap and memory overcommit trade-offs
+[[conf_node_health]]
+==== Configuring Node Health Checks
 
-xref:07-real-world-scaling.adoc[→ Go to Real World Scaling module]
+For this next portion of our lab we need to exit the *Virtualization* perspective and return to the *Core platform* perspective.
 
-[[key_concepts]]
-== Key Concepts
+. Using the OpenShift Console, from the left side navigation menu, select the dropdown for *Virtualization* and then select *Core platform*. You will be taken to the *Overview* page for your cluster.
++
+image::exercise6/06-image-nodehealthcheck-00.png[title="Return to Core Platform", link=self, window=blank, width=100%]
 
-=== Live Migration
-Moving a running VM from one node or storage backend to another without stopping the guest OS. Enables non-disruptive maintenance and workload balancing.
+. From there navigate to *Compute → NodeHealthChecks*, you will see that there are currently no *NodeHealthChecks* to be found. Click the *Create NodeHealthCheck* button.
++
+image::exercise6/06-image-nodehealthcheck-v2.png[title="Create NodeHealthCheck", link=self, window=blank, width=100%]
 
-=== Resource Overcommit
-Allocating more CPU or memory to VMs than physically exists on nodes. Useful for burst workloads but requires careful monitoring.
+. A new page will launch, fill it out with the following info:
++
+* Name the *NodeHealthCheck* `workerhealthcheck`.
+* Leave the *Remediation template* set to *Self node remediation*.
+* From the *Selector labels* dropdown, select *Worker* under *Role*. You do not need to select any additional *Labels*.
+* Leave *Min healthy* and both *Type* and *Status* drop downs as the default.
+* Change duration to *5s* for both of the *Unhealthy conditions*.
++
+. Click the *Create* button.
++
+image::exercise6/06-image-nodehealthcheck2.png[title="Create NodeHealthCheck", link=self, window=blank, width=100%]
++
+image::exercise6/06-image-nodehealthcheck3.png[title="Create NodeHealthCheck", link=self, window=blank, width=100%]
 
-=== Hot-Plugging
-Adding or removing hardware resources (CPU, memory, disk, NIC) to a running VM without shutdown.
+. Once created you should be returned to the *NodeHealthCheck* page where it shows that the policy we just created is now enabled.
 
-=== Affinity Rules
-Kubernetes scheduling constraints that influence where VMs are placed:
-* **Node Affinity** — Host preference
-* **Pod Affinity** — Colocation with other workloads
-* **Pod Anti-Affinity** — Separation from other workloads
+[[failure_sim]]
+==== Simulating a Node Failure
 
-=== Descheduling
-Post-scheduling optimization that evicts and replaces VMs to improve cluster efficiency.
+Now we are going to simulate a node failure and see how OpenShift Virtualization handles the situation.
 
-=== Fencing
-Automatic detection of unhealthy nodes and recovery mechanisms to maintain cluster health.
+. Using the left side navigation menu, return to the *Virtualization* perspective by clicking on the *Core platform* dropdown, and selecting the *Virtualization* option.
++
+image::exercise6/06-image-nodehealthcheck-virt.png[title="Return to Virtualization", link=self, window=blank, width=100%]
 
-[[common_workflows]]
-== Common Workflows
+. Once you are in the *Virtualization* perspective, use the left side navigation menu to select *VirtualMachines*, find the *fencing* project in the center column and expand it to see the *fencing-vm1* virtual machine. Power on this machine with the *Play* button or *Actions* menu.
++
+image::exercise6/06-image-nodehealthcheck-poweron.png[title="Power-on VM", link=self, window=blank, width=100%]
 
-=== Scenario 1: Non-Disruptive Node Maintenance
-1. xref:05-live-migration.adoc[Migrate VMs] off the target node
-2. Perform maintenance
-3. Resume normal operations with descheduler optimization
+. For the next step we need to determine which node is currently hosting *fencing-vm1*. We can do that by checking the *General* box on the VM *Overview* page, or with the following command in our embedded terminal:
++
+[source,text,role=execute]
+.Get VM info
+----
+oc get vmi fencing-vm1 -n fencing
+----
++
+.Output
+----
+NAME          AGE    PHASE     IP            NODENAME                 READY
+fencing-vm1   3m53s  Running   10.234.0.74   worker-cluster-l2tlf-2   True
+----
 
-=== Scenario 2: Handling Node Failure
-1. xref:11-fencing.adoc[Node health checks] detect failure
-2. xref:11-fencing.adoc[Fencing] evicts VMs from failed node
-3. VMs are xref:05-live-migration.adoc[automatically migrated] to healthy nodes
+. To make later exercises easier, we can store the worker node name as a variable. We can use the *jq* command to only return the *nodeName* field, and assign that to a variable for later use:
++
+[source,text,role=execute]
+.Get VM info into a variable
+----
+node=`oc get vmi fencing-vm1 -n fencing -o json | jq -r '.status.nodeName'`
+----
++
+[source,text,role=execute]
+.Show node name
+----
+echo ${node}
+----
++
+.Output
+----
+worker-cluster-l2tlf-2
+----
 
-=== Scenario 3: Peak Load Management
-1. xref:07-real-world-scaling.adoc[Monitor utilization] on running VMs
-2. xref:08-hot-plug.adoc[Hot-plug] additional resources as needed
-3. xref:07-real-world-scaling.adoc[Add cluster nodes] if capacity required
+. Before we trigger a failure, let us take a look at our nodes in the OpenShift console.
 
-=== Scenario 4: Workload Optimization
-1. Configure xref:09-affinity.adoc[affinity rules] for workload placement
-2. Enable xref:10-descheduler.adoc[descheduler] for ongoing optimization
-3. Periodically review xref:06-resource-management.adoc[resource allocation]
+. In the left side navigation menu click on *Compute -> Nodes* and you will see all of your cluster nodes listed, and their status will show as *Ready*.
++
+image::exercise6/06-image-nodehealthcheck-nodelist.png[title="Node list", link=self, window=blank, width=100%]
+
+. Now we are going to create a failure condition. Back on the embedded terminal, we are going to access the node from step 4, using the *${node}* variable and the *oc debug* command, to put it into an unhealthy state by stopping the *kubelet* service. You can perform this action with the following syntax:
++
+[source,text,role=execute]
+.Debug into the node
+----
+oc debug node/${node}
+----
++
+[source,text,role=execute]
+.chroot
+----
+chroot /host
+----
++
+[source,text,role=execute]
+.Force the node into an unhealthy state
+----
+systemctl stop kubelet
+----
++
+.Output
+----
+Removing debug pod ...
+----
+
+. Check back on your OpenShift console and you will see that the worker node where we forced the failure is now in a *Not Ready* state.
++
+image::exercise6/06-image-nodehealthcheck-nodefail.png[title="Node failed", link=self, window=blank, width=100%]
+
+. Once the *debug pod* exits, you can monitor the status of your Virtual Machine, *fencing-vm1* by running a `watch` command. You will see that the self remediation process is isolating the node and migrating the workloads.
+
++
+[source,text,role=execute]
+.Get VM info
+----
+oc get vmi fencing-vm1 -n fencing -w
+----
++
+.Output
+[source,console]
+----
+NAME          AGE   PHASE     IP            NODENAME                 READY
+fencing-vm1   21m   Running   10.234.0.74   worker-cluster-l2tlf-2   True
+fencing-vm1   21m   Running   10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   23m   Running   10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   23m   Failed    10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   23m   Failed    10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   23m   Failed    10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   23m   Failed    10.234.0.74   worker-cluster-l2tlf-2   False
+fencing-vm1   0s    Pending
+fencing-vm1   0s    Pending
+fencing-vm1   0s    Scheduling                                       False
+fencing-vm1   0s    Scheduling                                       False
+fencing-vm1   10s   Scheduled               worker-cluster-l2tlf-1   False
+fencing-vm1   12s   Scheduled               worker-cluster-l2tlf-1   False
+fencing-vm1   12s   Running   10.233.0.29   worker-cluster-l2tlf-1   False
+fencing-vm1   12s   Running   10.233.0.29   worker-cluster-l2tlf-1   True
+fencing-vm1   12s   Running   10.233.0.29   worker-cluster-l2tlf-1   True
+----
+
+. Return to your OpenShift console and click on *VirtualMachines*, and expand the *fencing* folder and click on the *fencing-vm1* virtual machine to confirm its status. Confirm that it is back running after the unexpected node failure, and that it is now scheduled on a different worker node.
++
+image::exercise6/06-image-nodehealthcheck-vmrun.png[title="VM back running", link=self, window=blank, width=100%]
+
+Congratulations, you have completed the Fencing exercises!
+
+IMPORTANT: Be sure to *stop fencing-vm-1* when you complete this module to ensure that there are enough resources in the cluster to complete the other modules. You can perform this action through the OpenShift console by clicking the *Stop* button or using the *Actions* dropdown.
 
 [[next_steps]]
 == Next Steps

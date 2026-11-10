@@ -22,14 +22,9 @@ These capabilities enable organizations to:
 
 .*Topics Covered*
 
-. xref:12-verify-sync.adoc[Verify Sync Controllers] — Ensure cluster synchronization is properly configured
-. xref:13-cclm-concepts.adoc[CCLM Concepts] — Understand cross-cluster live migration architecture and operations
-. xref:14-cclm-with-acm.adoc[CCLM with ACM] — Integrate CCLM with Red Hat Advanced Cluster Management
-
 [[prerequisites]]
 == Prerequisites
 
-* Completion of the xref:00-basics.adoc[Basics] and xref:01-core.adoc[Core Operators] modules
 * Access to at least two OpenShift clusters with OpenShift Virtualization installed
 * Network connectivity between clusters (low-latency preferred for migration)
 * Shared storage accessible from both clusters (for CCLM operations)
@@ -37,54 +32,9 @@ These capabilities enable organizations to:
 * Red Hat Advanced Cluster Management (ACM) installed (for ACM integration)
 * Understanding of Kubernetes cluster networking and storage
 
-[[learning_path]]
-== Recommended Learning Path
-
-Follow these topics in the suggested order:
-
-1. **xref:12-verify-sync.adoc[Verify Sync Controllers]** — Start by ensuring cluster synchronization infrastructure is healthy
-2. **xref:13-cclm-concepts.adoc[CCLM Concepts]** — Learn the architecture and operational model for cross-cluster migration
-3. **xref:14-cclm-with-acm.adoc[CCLM with ACM]** — Integrate with ACM for multi-cluster management and automation
-
-[[quick_reference]]
-== Quick Reference
-
-[cols="3,4,2"]
-|===
-|Topic |Description |Module
-
-|Sync Controllers
-|Verify cluster synchronization and health status
-|xref:12-verify-sync.adoc[12]
-
-|CCLM Concepts
-|Architecture, prerequisites, and operational model for cross-cluster live migration
-|xref:13-cclm-concepts.adoc[13]
-
-|CCLM with ACM
-|Integrate CCLM with Advanced Cluster Management for centralized governance
-|xref:14-cclm-with-acm.adoc[14]
-
-|===
-
-[[module_overview]]
 == Module Overview
 
-=== Verify Sync Controllers (Module 12)
-
-Before performing any cross-cluster operations, you must verify that the synchronization controllers are properly configured and healthy on all participating clusters. This module covers:
-
-* Understanding sync controller architecture
-* Verifying controller status and health
-* Diagnosing synchronization issues
-* Troubleshooting connectivity between clusters
-* Ensuring prerequisites are met for CCLM
-
-Healthy sync controllers are the foundation for all multi-cluster operations.
-
-xref:12-verify-sync.adoc[→ Go to Verify Sync Controllers module]
-
-=== CCLM Concepts (Module 13)
+=== Cross Cluster Live Migration
 
 Cross-Cluster Live Migration (CCLM) enables moving running virtual machines from one OpenShift cluster to another without stopping the guest operating system. This module covers:
 
@@ -98,24 +48,7 @@ Cross-Cluster Live Migration (CCLM) enables moving running virtual machines from
 
 Understanding CCLM concepts is essential before implementing migrations between clusters.
 
-xref:13-cclm-concepts.adoc[→ Go to CCLM Concepts module]
 
-=== CCLM with ACM (Module 14)
-
-Red Hat Advanced Cluster Management (ACM) provides centralized policy management, governance, and automation for multi-cluster environments. Integration with CCLM enables:
-
-* Centralized migration orchestration across clusters
-* Policy-based VM placement and migration decisions
-* Automated failover and disaster recovery
-* Multi-cluster compliance and governance
-* Workload management across geographically distributed clusters
-* Integration with backup and recovery solutions
-
-This module covers implementing CCLM within an ACM-managed environment.
-
-xref:14-cclm-with-acm.adoc[→ Go to CCLM with ACM module]
-
-[[key_concepts]]
 == Key Concepts
 
 === Sync Controllers
@@ -233,6 +166,21 @@ After completing the Multi-Cluster modules, you'll be ready to explore:
 * **Production Deployment** — Implementing disaster recovery and geographic distribution at scale
 
 Start with xref:12-verify-sync.adoc[Verify Sync Controllers] to begin your multi-cluster journey.
+
+=== Cross Cluster Live Migration with ACM
+
+Red Hat Advanced Cluster Management (ACM) provides centralized policy management, governance, and automation for multi-cluster environments. Integration with CCLM enables:
+
+* Centralized migration orchestration across clusters
+* Policy-based VM placement and migration decisions
+* Automated failover and disaster recovery
+* Multi-cluster compliance and governance
+* Workload management across geographically distributed clusters
+* Integration with backup and recovery solutions
+
+This module covers implementing CCLM within an ACM-managed environment.
+
+=== *Add Governance from ACM*
 
 == Summary
 
