@@ -14,83 +14,7 @@ The Core Operators section covers the essential operational features and advance
 * Configure fencing and node health checks for failure remediation
 * Scale virtual workloads across your infrastructure
 
-.*Topics Covered*
-
-. xref:05-live-migration.adoc[Live Migration] — Move running VMs between nodes and storage classes
-. xref:06-resource-management.adoc[Resource Management] — Understand and optimize CPU/memory allocation
-. xref:08-hot-plug.adoc[Hot-Plug] — Add/remove resources without stopping VMs
-. xref:09-affinity.adoc[Affinity] — Control VM placement using node and pod affinity rules
-. xref:10-descheduler.adoc[Descheduler] — Dynamically reschedule VMs for optimal cluster utilization
-. xref:11-fencing.adoc[Fencing] — Configure node health checks and automatic failure remediation
-. xref:07-real-world-scaling.adoc[Real World Scaling] — Scale VMs and clusters in realistic production scenarios
-
-[[prerequisites]]
-== Prerequisites
-
-* Completion of the xref:00-basics.adoc[Basics] module
-* Access to an OpenShift cluster with OpenShift Virtualization installed
-* Running virtual machine(s) to work with
-* Administrator access to configure cluster-level settings
-* Understanding of Kubernetes concepts (nodes, scheduling, tolerations)
-
-[[learning_path]]
-== Recommended Learning Path
-
-Follow these topics in the suggested order for a comprehensive understanding:
-
-1. **xref:05-live-migration.adoc[Live Migration]** — Start with the foundational concept of moving workloads
-2. **xref:06-resource-management.adoc[Resource Management]** — Understand resource limits and overcommit ratios
-3. **xref:07-real-world-scaling.adoc[Real World Scaling]** — Learn scaling patterns and bottlenecks
-4. **xref:08-hot-plug.adoc[Hot-Plug]** — Practice adding resources dynamically
-5. **xref:09-affinity.adoc[Affinity]** — Implement placement strategies
-6. **xref:10-descheduler.adoc[Descheduler]** — Automate workload optimization
-7. **xref:11-fencing.adoc[Fencing]** — Configure high-availability safeguards
-
-[[quick_reference]]
-== Quick Reference
-
-[cols="3,4,2"]
-|===
-|Topic |Description |Module
-
-|Live Migration
-|Move running VMs between nodes without disruption
-|xref:05-live-migration.adoc[05]
-
-|Resource Management
-|Manage CPU overcommit, memory allocation, and utilization
-|xref:06-resource-management.adoc[06]
-
-|Hot-Plug Resources
-|Add/remove CPU, memory, disks, and NICs to running VMs
-|xref:08-hot-plug.adoc[08]
-
-|Node Affinity
-|Force VMs to run on specific nodes or node groups
-|xref:09-affinity.adoc[09]
-
-|Pod Affinity/Anti-Affinity
-|Control VM placement relative to other pods and VMs
-|xref:09-affinity.adoc[09]
-
-|Dynamic Rescheduling
-|Automatically optimize VM placement based on cluster state
-|xref:10-descheduler.adoc[10]
-
-|Fencing & Health Checks
-|Detect node failures and remediate automatically
-|xref:11-fencing.adoc[11]
-
-|Scaling Workloads
-|Horizontally and vertically scale VMs in production
-|xref:07-real-world-scaling.adoc[07]
-
-|===
-
-[[module_overview]]
-== Module Overview
-
-=== Live Migration (Module 05)
+=== Live Migration
 
 ==== Introduction
 
@@ -252,7 +176,7 @@ Congratulations, you have completed the Live Migration exercises!
 
 IMPORTANT: Prior to moving on to the next section, please shut down the *live-migrate-vm1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
 
-=== Resource Management (Module 06)
+=== Resource Management
 
 ==== Introduction
 
@@ -264,6 +188,7 @@ In this section, you will learn about two overcommit tasks:
 
 * Understand and Overcommit CPU on a Virtual Machine
 * Understand, Enable, and Overcommit Memory on a Virtual Machine
+* Excluding a virtual machine from overcommit
 
 [[understanding_cpu]]
 ==== Understanding CPU Overcommit
@@ -683,10 +608,9 @@ oc get pod -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1 -o json | jq '.
 +
 NOTE: This is less than the _2048MiB_ being utilized by the VM, and is basically 1/4 of the requested memory 512MiB + **overhead** required to run the VM.
 
-Congratulations, you have completed the Resource Management exercises!
+*Add section to exclude a vm, with user create a new vm then add comments to exclude me for over commit*
 
-[IMPORTANT]
-====
+Congratulations, you have completed the Resource Management exercises!
 
 Prior to moving on and to prevent any unexpected issues in the remainder of this lab, use the following command to reset the memory overcommit percentage back to 100%
 
@@ -698,7 +622,7 @@ oc patch hyperconverged -n openshift-cnv kubevirt-hyperconverged --type merge -p
 Also, please shut down the *overcommit-vm-1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
 ===
 
-=== Hot-Plug (Module 08)
+=== Hot-Plug
 
 ==== Introduction
 
@@ -910,7 +834,7 @@ Congratulations, you have completed the Hot-Plug exercises!
 
 IMPORTANT: At the end of this module be sure to shut down the virtual machine *hot-plug-vm-1* that we were working with in order to conserve lab resources for future modules.
 
-=== Affinity (Module 09)
+=== Affinity
 
 ==== Introduction
 
@@ -1356,7 +1280,7 @@ Congratulations, you have completed the Affinity exercises!
 
 IMPORTANT: Stop the *node-affinity-vm*, *pod-affinity-vm*, and *pod-anti-affinity-vm* VMs from this module to ensure that there are enough resources to continue for the next module
 
-=== Descheduler (Module 10)
+=== Descheduler
 
 ==== Introduction
 
@@ -1771,65 +1695,6 @@ image::exercise6/06-image-nodehealthcheck-vmrun.png[title="VM back running", lin
 Congratulations, you have completed the Fencing exercises!
 
 IMPORTANT: Be sure to *stop fencing-vm-1* when you complete this module to ensure that there are enough resources in the cluster to complete the other modules. You can perform this action through the OpenShift console by clicking the *Stop* button or using the *Actions* dropdown.
-
-=== Real World Scaling (Module 07)
-
-This module applies multiple concepts in realistic production scenarios:
-
-* Examining resource utilization on running VMs
-* Horizontally scaling VM resources
-* Vertically scaling VM resources
-* Adding nodes to the cluster
-* Understanding swap and memory overcommit trade-offs
-
-xref:07-real-world-scaling.adoc[→ Go to Real World Scaling module]
-
-[[key_concepts]]
-== Key Concepts
-
-=== Live Migration
-Moving a running VM from one node or storage backend to another without stopping the guest OS. Enables non-disruptive maintenance and workload balancing.
-
-=== Resource Overcommit
-Allocating more CPU or memory to VMs than physically exists on nodes. Useful for burst workloads but requires careful monitoring.
-
-=== Hot-Plugging
-Adding or removing hardware resources (CPU, memory, disk, NIC) to a running VM without shutdown.
-
-=== Affinity Rules
-Kubernetes scheduling constraints that influence where VMs are placed:
-* **Node Affinity** — Host preference
-* **Pod Affinity** — Colocation with other workloads
-* **Pod Anti-Affinity** — Separation from other workloads
-
-=== Descheduling
-Post-scheduling optimization that evicts and replaces VMs to improve cluster efficiency.
-
-=== Fencing
-Automatic detection of unhealthy nodes and recovery mechanisms to maintain cluster health.
-
-[[common_workflows]]
-== Common Workflows
-
-=== Scenario 1: Non-Disruptive Node Maintenance
-1. xref:05-live-migration.adoc[Migrate VMs] off the target node
-2. Perform maintenance
-3. Resume normal operations with descheduler optimization
-
-=== Scenario 2: Handling Node Failure
-1. xref:11-fencing.adoc[Node health checks] detect failure
-2. xref:11-fencing.adoc[Fencing] evicts VMs from failed node
-3. VMs are xref:05-live-migration.adoc[automatically migrated] to healthy nodes
-
-=== Scenario 3: Peak Load Management
-1. xref:07-real-world-scaling.adoc[Monitor utilization] on running VMs
-2. xref:08-hot-plug.adoc[Hot-plug] additional resources as needed
-3. xref:07-real-world-scaling.adoc[Add cluster nodes] if capacity required
-
-=== Scenario 4: Workload Optimization
-1. Configure xref:09-affinity.adoc[affinity rules] for workload placement
-2. Enable xref:10-descheduler.adoc[descheduler] for ongoing optimization
-3. Periodically review xref:06-resource-management.adoc[resource allocation]
 
 [[next_steps]]
 == Next Steps
