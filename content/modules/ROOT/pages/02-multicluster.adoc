@@ -20,18 +20,6 @@ These capabilities enable organizations to:
 * Integrating CCLM with Red Hat Advanced Cluster Management
 * Managing multi-cluster virtualization governance and compliance
 
-.*Topics Covered*
-
-[[prerequisites]]
-== Prerequisites
-
-* Access to at least two OpenShift clusters with OpenShift Virtualization installed
-* Network connectivity between clusters (low-latency preferred for migration)
-* Shared storage accessible from both clusters (for CCLM operations)
-* Administrator access to all clusters
-* Red Hat Advanced Cluster Management (ACM) installed (for ACM integration)
-* Understanding of Kubernetes cluster networking and storage
-
 == Module Overview
 
 === Cross Cluster Live Migration
@@ -47,7 +35,6 @@ Cross-Cluster Live Migration (CCLM) enables moving running virtual machines from
 * Best practices and considerations for production use
 
 Understanding CCLM concepts is essential before implementing migrations between clusters.
-
 
 == Key Concepts
 
@@ -155,20 +142,32 @@ Cluster 1 (Source)              Cluster 2 (Destination)
 * Memory transfer time scales with VM memory size
 * Disk migration time varies by storage backend and disk size
 * Minimize workload I/O during migration for faster completion
+.*Topics Covered*
 
-[[next_steps]]
-== Next Steps
+[[prerequisites]]
+==== Prerequisites
 
-After completing the Multi-Cluster modules, you'll be ready to explore:
+* Access to at least two OpenShift clusters with OpenShift Virtualization installed
+* Network connectivity between clusters (low-latency preferred for migration)
+* Shared storage accessible from both clusters (for CCLM operations)
+* Administrator access to all clusters
+* Red Hat Advanced Cluster Management (ACM) installed (for ACM integration)
+* Understanding of Kubernetes cluster networking and storage
 
-* **Advanced Security Topics** — Compliance, security policies, and multi-cluster governance
-* **Ansible Automation** — Automating multi-cluster VM operations and lifecycle management
-* **Production Deployment** — Implementing disaster recovery and geographic distribution at scale
+=== Cross Cluster Live Migration without ACM
 
-Start with xref:12-verify-sync.adoc[Verify Sync Controllers] to begin your multi-cluster journey.
+Red Hat Advanced Cluster Management (ACM) provides centralized policy management, governance, and automation for multi-cluster environments. Integration with CCLM enables:
+
+* Centralized migration orchestration across clusters
+* Policy-based VM placement and migration decisions
+* Automated failover and disaster recovery
+* Multi-cluster compliance and governance
+* Workload management across geographically distributed clusters
+* Integration with backup and recovery solutions
 
 === Cross Cluster Live Migration with ACM
 
+==== Discover Destination Cluster
 Red Hat Advanced Cluster Management (ACM) provides centralized policy management, governance, and automation for multi-cluster environments. Integration with CCLM enables:
 
 * Centralized migration orchestration across clusters
@@ -191,4 +190,4 @@ The Multi-Cluster section provides the capabilities needed to manage virtual wor
 * **Centralized Governance** — ACM integration for consistent policy enforcement
 * **Zero-Downtime Operations** — Migrate workloads without interrupting services
 
-Mastery of multi-cluster virtualization enables enterprise-grade infrastructure resilience and global workload management.
+Mastery of multi-cluster virtualization enables enterprise-grade infrastructure resilience and global workload management.  Proceed to the security module to explore advanced VM operations.

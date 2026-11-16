@@ -441,6 +441,293 @@ After mastering Ansible Automation for OpenShift Virtualization:
 
 Start with xref:04-day-to-day-ansible.adoc#dynamic_inventory[Dynamic Inventory] to begin automating your infrastructure.
 
+[[new_in_51]]
+== New in OpenShift Virtualization 5.1
+
+OpenShift Virtualization 5.1 introduces several new features and improvements that enhance VM operations, storage management, and cluster management. This section covers practical tasks you can perform with these new capabilities.
+
+[[declarative_hotplug]]
+=== Declarative Hotplug: Adding Resources Without VM Downtime
+
+OpenShift Virtualization 5.1 graduates the Declarative Hotplug feature to General Availability (GA). This enables you to add or remove NICs (Network Interface Cards) and disks without stopping the VM.
+
+*Task: Add a Disk to a Running VM Using Declarative Hotplug*
+
+. Navigate to the Virtualization perspective and select your project
+. Click on a running virtual machine to open its details panel
+. Click the *Configuration* tab and select the *Storage* subtab
+. Click the *Add disk* button
+. In the Add disk dialog:
+   * Provide a disk name (e.g., `data-disk-new`)
+   * Select a size (e.g., 10 GB)
+   * Choose a StorageClass from the dropdown
+   * Click *Save*
++
+image::exercise5/hotplug-disk-new.png[title="Add Disk to Running VM", link=self, window=blank, width=100%]
+
+. The disk attaches immediately without stopping the VM. The VM guest OS detects the new device automatically.
+. Log into the VM console to verify the new disk is available:
++
+[source,sh,role=execute]
+----
+lsblk
+----
+. Format and mount the disk for use:
++
+[source,sh,role=execute]
+----
+sudo mkfs.ext4 /dev/vdb
+sudo mkdir /mnt/data
+sudo mount /dev/vdb /mnt/data
+----
+
+*Task: Add a Network Interface to a Running VM*
+
+. From the VM Configuration tab, select the *Network* subtab
+. Click the *Add network interface* button
+. In the Add network interface dialog:
+   * Provide an interface name
+   * Select a network attachment definition or pod network
+   * Click *Save*
++
+image::exercise5/hotplug-nic-new.png[title="Add NIC to Running VM", link=self, window=blank, width=100%]
+
+. The interface is added immediately without VM downtime
+. Verify the new interface in the VM guest OS:
++
+[source,sh,role=execute]
+----
+ip link show
+ip addr show
+----
+
+[[disk_serial_number]]
+=== Disk Serial Number Management
+
+OpenShift Virtualization 5.1 introduces GA support for managing disk serial numbers through the console. This is useful for tracking disks across migrations and ensuring VM portability across infrastructure platforms.
+
+*Task: Configure Disk Serial Numbers for Migration Readiness*
+
+. Open a virtual machine's Configuration tab and select *Storage*
+. Click on an existing disk to edit it
+. In the disk editor, you'll now see a *Serial number* field
+. If migrating from VMware/vSphere, the disk serial number from the source VM UUID is automatically preserved:
++
+[source,txt]
+----
+Source vSphere VM UUID: 421eef81-52f9-4f8d-8d4f-abc123def456
+Preserved disk serial: vm-421eef81-52f9-4f8d-8d4f-abc123def456
+----
+
+. Assign meaningful serial numbers for tracking:
+   * Use source infrastructure identifiers
+   * Maintain consistency with naming conventions
+   * Document the mapping for audits
++
+image::exercise5/disk-serial-number.png[title="Disk Serial Number Management", link=self, window=blank, width=100%]
+
+. Click *Save* to persist the serial number configuration
+
+[[storage_class_migration]]
+=== Storage Class Migration Improvements
+
+OpenShift Virtualization 5.1 enhances storage class migration with better test infrastructure and improved UI, making it safer and easier to move VMs between storage tiers.
+
+*Task: Migrate VM Storage to a Different StorageClass*
+
+. Navigate to a running virtual machine's Configuration tab
+. Click *Storage* to view attached disks
+. Click on the disk you wish to migrate and select the *Migrate* action from the disk menu
+. In the *Migrate Storage* dialog:
+   * Select the *Destination StorageClass* from the dropdown
+   * Review the migration plan (shows source and destination details)
++
+image::exercise5/storage-migration-5-1.png[title="Storage Class Migration Dialog", link=self, window=blank, width=100%]
+
+. Click *Migrate* to begin the operation
+. Monitor the migration progress in the migration details panel:
+   * Progress percentage
+   * Estimated completion time
+   * Any errors or warnings
+. Once complete, verify the disk is using the new StorageClass:
++
+[source,sh,role=execute]
+----
+oc get pvc -o wide
+oc get storageclass
+----
+
+[[cloud_init_generator]]
+=== Built-in Cloud-Init / Sysprep Configuration Generator
+
+OpenShift Virtualization 5.1 includes a new built-in configuration generator in the console for cloud-init (Linux) and Sysprep (Windows) settings, simplifying VM customization during provisioning.
+
+*Task: Configure Cloud-Init for a New Linux VM*
+
+. When creating a new VM from the console, navigate to the *Customize* step
+. In the *Initial run* section, you'll see a new *Cloud-Init Editor*
+. Click *Open Editor* to generate cloud-init configuration:
++
+[source,yaml]
+----
+#cloud-config
+hostname: my-custom-vm
+fqdn: my-custom-vm.example.com
+users:
+  - name: cloud-user
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC...
+packages:
+  - git
+  - curl
+  - vim
+package_update: true
+package_upgrade: true
+runcmd:
+  - echo "VM Customization Complete"
+----
+
+. The editor provides syntax validation and common configuration templates
+. Configure:
+   * Hostname and FQDN
+   * User accounts and SSH keys
+   * Package installation lists
+   * Custom initialization commands
+. Click *Save* to apply the configuration
++
+image::exercise5/cloud-init-generator.png[title="Cloud-Init Generator", link=self, window=blank, width=100%]
+
+. Deploy the VM and verify the customization applied:
++
+[source,sh,role=execute]
+----
+cat /etc/hostname
+whoami
+sudo apt list --installed | grep git
+----
+
+*Task: Configure Sysprep for a New Windows VM*
+
+. When creating a new Windows VM, navigate to the *Customize* step
+. In the *Initial run* section, select *Sysprep* from the dropdown
+. Configure Windows VM settings:
+   * Computer name
+   * Administrator password
+   * Time zone
+   * Network configuration
+. The generator creates the proper Sysprep answer file format
+. Deploy the VM and Windows applies the configuration on first boot
+
+[[network_qos]]
+=== Network Quality of Service (QoS) Configuration
+
+OpenShift Virtualization 5.1 enables VM network traffic shaping with Quality of Service policies, ensuring predictable network behavior for latency-sensitive workloads.
+
+*Task: Configure Network QoS for a VM*
+
+. Open a virtual machine's Configuration tab and select *Network*
+. Click on a network interface to edit it
+. In the network interface editor, you'll see new *QoS* settings:
+   * *Egress bandwidth limit* — Maximum upload rate
+   * *Ingress bandwidth limit* — Maximum download rate
++
+image::exercise5/network-qos.png[title="Network QoS Configuration", link=self, window=blank, width=100%]
+
+. Configure example values:
+   * Set Egress limit: 100 Mbps (for controlled uploads)
+   * Set Ingress limit: 500 Mbps (for controlled downloads)
+. Click *Save* to apply the QoS policy
+. From the VM console, test the bandwidth limits:
++
+[source,sh,role=execute]
+----
+# Install iperf for bandwidth testing
+sudo yum install -y iperf3
+
+# On a test server, run: iperf3 -s
+# On the VM, test upload speed:
+iperf3 -c <test-server-ip> -R
+# Test download speed:
+iperf3 -c <test-server-ip>
+----
+. Monitor that traffic respects the configured QoS limits
+
+[[mac_spoof_filtering]]
+=== MAC Spoof Filtering Control
+
+OpenShift Virtualization 5.1 allows administrators to enable or disable MAC spoof filtering on a per-network basis, supporting network architectures that require non-standard MAC addressing.
+
+*Task: Disable MAC Spoof Filtering for an Appliance VM*
+
+Appliance VMs or HA-cluster VMs may require multiple MAC addresses for failover. To support this:
+
+. Navigate to the *Networking* section in the left menu under Virtualization
+. Select *Network Attachment Definitions*
+. Find or create a NAD (Network Attachment Definition) for your appliance network
+. Edit the NAD configuration:
++
+[source,yaml]
+----
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: appliance-network
+spec:
+  config: '{"cniVersion":"0.3.1","type":"ovn-k8s-cni-overlay","topology":"localnet","mtu":1400,"disableMACSpoofing":true}'
+----
+
+. Set `"disableMACSpoofing": true` in the CNI configuration
+. Click *Save*
+. Attach this network to your appliance VM:
+   * Edit the VM configuration
+   * Add a network interface
+   * Select the appliance-network NAD
+. The VM can now use multiple MAC addresses without filtering
+
+[[vm_migration_progress]]
+=== VM Migration Progress and Error Visibility
+
+OpenShift Virtualization 5.1 displays migration operations in a dedicated modal with progress details and error information, reducing the need to check logs.
+
+*Task: Monitor VM Migration with New Progress Modal*
+
+. Start a live migration of a virtual machine:
+   * Select a running VM
+   * Click *Actions* > *Migration* > *Compute*
+   * Choose a destination node and click *Migrate VirtualMachine*
+
+. A new migration progress modal appears showing:
+   * Current migration status (Initializing, Running, Completed)
+   * Progress percentage
+   * Memory transfer progress
+   * Estimated time remaining
+   * Warning or error messages in real-time
++
+image::exercise5/migration-progress-modal.png[title="VM Migration Progress Modal", link=self, window=blank, width=100%]
+
+. Monitor the migration without navigating to other pages
+. If an error occurs, the modal displays:
+   * Error description
+   * Troubleshooting suggestions
+   * Log references for further investigation
+. Once complete, the modal updates with completion time and success status
+
+[[summary_5_1]]
+== Summary of OpenShift Virtualization 5.1 Improvements
+
+This section introduced you to key new features in OpenShift Virtualization 5.1:
+
+* **Declarative Hotplug** — Add or remove NICs and disks without VM downtime for faster operational flexibility
+* **Disk Serial Number Management** — Preserve and track disk identities across migrations and environments
+* **Enhanced Storage Migration** — Improved UI and test infrastructure for safer storage class migration
+* **Cloud-Init / Sysprep Generator** — Built-in configuration templates reduce customization time for new VMs
+* **Network QoS** — Traffic shaping policies enable predictable performance for latency-sensitive workloads
+* **MAC Spoof Filtering Control** — Support specialized VM architectures like appliances and HA clusters
+* **Migration Visibility** — Real-time progress tracking eliminates guesswork during VM migrations
+
+These enhancements significantly improve operational velocity and reduce manual intervention in VM lifecycle management.
+
 == Summary
 
 The Ansible Automation section enables operators and platform teams to:

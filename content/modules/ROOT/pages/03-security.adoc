@@ -489,4 +489,4 @@ If RHACS is deployed on a hub or connected spokes:
 
 == Summary
 
-You configured compliance scanning with the Compliance Operator, applied a NetworkPolicy to control VM egress, and reviewed how RHACS and RHACM extend security for OpenShift Virtualization. Continue with xref:04-ansible.adoc[Ansible Automation] for inventory, observability, and day-to-day automation.
+You configured compliance scanning with the Compliance Operator, applied a NetworkPolicy to control VM egress, and reviewed how RHACS and RHACM extend security for OpenShift Virtualization. Continue with Ansible Automation for inventory, observability, and day-to-day automation.
