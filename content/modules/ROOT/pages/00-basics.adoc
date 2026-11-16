@@ -13,7 +13,7 @@ This module introduces you to the fundamentals of creating and managing virtual 
 * Control virtual machine power states and lifecycle
 
 [[labaccess]]
-== Accessing the OpenShift Cluster
+=== Accessing the OpenShift Cluster
 
 Your OpenShift cluster console is available {openshift_cluster_console_url}[here^].
 
@@ -30,7 +30,7 @@ oc login -u {openshift_cluster_admin_username} -p {openshift_cluster_admin_passw
 ----
 
 [[create_project]]
-== Create a Project
+=== Create a Project
 
 . When you first log in, you will be placed in the *Core Platform* perspective with an introductory prompt. Click the *Skip tour* button to close the window.
 +
@@ -225,4 +225,4 @@ In this module, you have:
 * Reviewed VM configuration options for storage and networking
 * Practiced VM lifecycle state management (start, stop, pause, restart)
 
-These fundamental skills are the foundation for all advanced OpenShift Virtualization capabilities. Proceed to the xref:05-live-migration.adoc[Live Migration] module to explore advanced VM operations.
+These fundamental skills are the foundation for all advanced OpenShift Virtualization capabilities. Proceed to the advance module to explore advanced VM operations.

@@ -1,8 +1,8 @@
-= Core Operators for OpenShift Virtualization
+= Advance Operators for OpenShift Virtualization
 
 == Introduction
 
-The Core Operators section covers the essential operational features and advanced capabilities that make OpenShift Virtualization production-ready. These operators and features enable you to manage VM workloads at scale, ensure optimal resource utilization, maintain high availability, and implement sophisticated scheduling strategies.
+The Advance Operators section covers the essential operational features and advanced capabilities that make OpenShift Virtualization production-ready. These operators and features enable you to manage VM workloads at scale, ensure optimal resource utilization, maintain high availability, and implement sophisticated scheduling strategies.
 
 .*What You'll Learn*
 
@@ -14,9 +14,9 @@ The Core Operators section covers the essential operational features and advance
 * Configure fencing and node health checks for failure remediation
 * Scale virtual workloads across your infrastructure
 
-=== Live Migration
+== Live Migration
 
-==== Introduction
+=== Introduction
 
 Live migration of workloads between compute nodes and storage types is a crucial feature expected of any modern hypervisor. OpenShift Virtualization allows for the simple and easy process of migrating your virtual machine workloads between nodes and storageclasses in the cluster as determined by either the Kubernetes scheduler, or you the end user.
 
@@ -28,7 +28,7 @@ In a container-based application there are often multiple replicas of a containe
 * Live migration of a virtual machine from one node to another specific node.
 * Live migration of virtual machine storage from one StorageClass to another.
 
-==== Prerequisites for Live Migration
+=== Prerequisites for Live Migration
 
 * The underlying PVC must use *ReadWriteMany (RWX)* access mode
 * The pod network must not be configured with the bridge binding type.
@@ -36,7 +36,7 @@ In a container-based application there are often multiple replicas of a containe
 * CPU model must match on the source and destination compute node - you can not live migrate virtual guests from Intel to AMD, ARM, or PowerPC processor types, even though they are all supported by OpenShift Virtualization and mixed clusters can exist.
 
 [[compute_rand]]
-==== Compute Migration to a random node
+=== Compute Migration to a random node
 
 During maintenance or troubleshooting, you might need to migrate a VM to a different node. Live migration is the process of moving a running Virtual Machine Instance (VMI) to a different node without disruption.
 
@@ -77,7 +77,7 @@ image::exercise1/01-image-compute-007.png[title="VM is running", link=self, wind
 . The VM has live migrated to a new worker node while still running.
 
 [[compute_spec]]
-==== Compute Migration to a specific node
+=== Compute Migration to a specific node
 
 During maintenance or troubleshooting, you may need to choose the destination of a virtual guest during the live migration process. The process here is quite similar to the last exercise, there are just a few additional steps that allow for you to live migrate a Virtual Machine to a *specific* node in the cluster.
 
@@ -103,7 +103,7 @@ image::exercise1/01-image-compute-013.png[title="VM is migrating", link=self, wi
 image::exercise1/01-image-compute-014.png[title="VM is running", link=self, window=blank, width=100%]
 
 [[storage_mig]]
-==== Storage Migration
+=== Storage Migration
 
 Storage environments often have their own lifecycles, maintenance schedules, and performance profiles. It may become necessary to migrate virtual workloads to a new storage class should the backing storage system need to undergo maintenance or be replaced entirely. Likewise, many customers create custom storage classes based on tiers of performance. A virtual machine running a database that needs to be highly responsive may map to a storageclass provided by an all-flash system, while a simple virtual webserver may find itself attached to a storageclass from a traditional spinning disk array. OpenShift Virtualization allows the migration of PVCs from one StorageClass to another while the virtual machine is running.
 
@@ -176,9 +176,9 @@ Congratulations, you have completed the Live Migration exercises!
 
 IMPORTANT: Prior to moving on to the next section, please shut down the *live-migrate-vm1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
 
-=== Resource Management
+== Resource Management
 
-==== Introduction
+=== Introduction
 
 *Overcommit* occurs when the allocated virtual resources exceed the physical resources available on the host. Overcommit allows users to enable higher workload density by leveraging the fact that Virtual Machines (VMs) rarely use their full allocated capacity simultaneously.
 
@@ -191,7 +191,7 @@ In this section, you will learn about two overcommit tasks:
 * Excluding a virtual machine from overcommit
 
 [[understanding_cpu]]
-==== Understanding CPU Overcommit
+=== Understanding CPU Overcommit
 
 In OpenShift Virtualization, compute resources assigned to Virtual Machines (VMs) are backed by either *Guaranteed CPUs* or *time-sliced CPU shares*.
 
@@ -208,7 +208,7 @@ The default _10:1_ overcommit ratio can be reconfigured to the desired overcommi
 NOTE: Resource assignments are made at *virt-launcher* pod scheduling time, so any VMs will need to be live migrated or stopped and restarted to change CPU allocation behavior after a ratio change as been made.
 
 [[verifying_cpu]]
-==== Verifying CPU Overcommit Ratio
+=== Verifying CPU Overcommit Ratio
 
 . Ensure that you are logged into both the OpenShift console and the provided Terminal as the Admin account before proceeding with this lab module.
 
@@ -394,7 +394,7 @@ Example:
 ----
 
 [[default_cpu_ratio]]
-==== Understanding the Default 10:1 CPU Overcommit Ratio
+=== Understanding the Default 10:1 CPU Overcommit Ratio
 
 OpenShift Virtualization applies a default *10:1 CPU overcommit ratio* when you don't explicitly specify CPU requests. This means that if a VM has multiple vCPUs, the actual CPU request on the *virt-launcher* pod will be 1/10th of the total cpu requested by the VM.
 
@@ -425,7 +425,7 @@ image::exercise2/pod-cpu-details.png[title="Confirm number of CPUs", link=self, 
 . Notice that a VM with 32 vCPUs only requests `3200m` (0.1 * 32 = 3.2 CPU) by default!
 
 [[understanding_memory]]
-==== Understanding Memory Overcommit
+=== Understanding Memory Overcommit
 
 Prior to the release of OpenShift 4.21, based on Kubernetes 1.21, there was not a generally available native SWAP implementation in Kubernetes. In earlier releases OpenShift Virtualization worked around this lack of feature availability by utilizing the *wasp-agent* add-on.
 
@@ -462,7 +462,7 @@ Please see the section on https://docs.redhat.com/en/documentation/openshift_con
 ====
 
 [[verifying_memory]]
-==== Verifying Memory Overcommit
+=== Verifying Memory Overcommit
 
 . Using the OpenShift console, select the *overcommit-vm-1* virtual machine in the *overcommit* namespace, and verify the current amount of memory assigned to the guest in the *Overview* pane.
 +
@@ -507,7 +507,7 @@ oc get pod -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1 -o json | jq '.
 NOTE: The *virt-launcher* pod is requesting 2564MiB which is 2048MiB + **overhead** required to run the VM.
 
 [[enable_mem_overcommit]]
-==== Enable Memory Overcommit
+=== Enable Memory Overcommit
 
 Now let's turn on Memory Overcommit for virtual machine workloads and see how that changes things.
 
@@ -608,7 +608,19 @@ oc get pod -n over-commit -l vm.kubevirt.io/name=overcommit-vm-1 -o json | jq '.
 +
 NOTE: This is less than the _2048MiB_ being utilized by the VM, and is basically 1/4 of the requested memory 512MiB + **overhead** required to run the VM.
 
-*Add section to exclude a vm, with user create a new vm then add comments to exclude me for over commit*
+=== Running Memory Overcommit with Virtual Machine excluded
+
+"Not every VM should swap — your latency-sensitive DB stays on real RAM."
+
+There's no on/off checkbox — opt-out is controlled by QoS class and how the VM declares memory. Two levers (use either/both):
+
+Use requests.memory instead of memory.guest. A VM that defines memory via spec.domain.resources.requests.memory is excluded from overcommit (its request is honored as-is). A VM that uses spec.domain.memory.guest participates in overcommit. This is also the #1 "why isn't overcommit working on this VM?" gotcha.
+Make it Guaranteed QoS (set memory requests == limits). Swap is only assigned to Burstable QoS VM pods — Guaranteed VMs never swap.
+View it (GUI): Virtualization → VirtualMachines → [vm] → Configuration → Scheduling (QoS / dedicated resources), or VirtualMachines → [vm] → YAML.
+View it (YAML): spec.template.spec.domain.memory.guest (participates) vs spec.template.spec.domain.resources.requests.memory (excluded); check the running pod's class at VirtualMachines → [vm] → Pod → YAML → status.qosClass (Guaranteed = won't swap).
+
+Trade-off to mention: a Guaranteed VM has its swap ceiling at 0 and a hard memory cap — so under node memory pressure it has nowhere to spill and is the one that gets OOM-killed first. Excluding a VM protects it from swapping, not from contention. "Burstable bends, Guaranteed breaks."
+VMware hook: "Like pinning a VM's memory reservation so it never balloons/swaps — but know it forfeits the safety valve the others get."
 
 Congratulations, you have completed the Resource Management exercises!
 
@@ -622,9 +634,9 @@ oc patch hyperconverged -n openshift-cnv kubevirt-hyperconverged --type merge -p
 Also, please shut down the *overcommit-vm-1* virtual machine using the *Stop* button or the *Actions* menu in order to conserve lab resources.
 ===
 
-=== Hot-Plug
+== Hot-Plug
 
-==== Introduction
+=== Introduction
 
 One of the benefits of running workloads on virtual machines is the fact that they are just that, virtual. When you consider the maintenance required to expand resources on a physical server, by upgrading a CPU or adding a few extra DIMMs to increase memory, you realize how advantageous it is to be running in a virtual server environment. The same goes for if you need increased disk drive space, or if you'd like to add an additional network interface. In OpenShift Virtualization each of these tasks can be achieved in a hot-plug manner, that is to say while the machine is running without any adverse effect on the applications running on the VM.
 
@@ -635,7 +647,7 @@ One of the benefits of running workloads on virtual machines is the fact that th
 * Add a hotplug network interface (NIC) to a running virtual machine.
 
 [[cpu_mem]]
-==== Adding CPU and Memory to a Running VM
+=== Adding CPU and Memory to a Running VM
 
 In this exercise, we will add additional CPU and Memory resources to a Virtual Machine by changing the Virtual Machine's Instance Type. You will start with an existing VM that has a single vCPU and 2 GiB of memory, and modify it to have 2 vCPU and 4 GiB of memory.
 
@@ -692,7 +704,7 @@ image::exercise3/03-image-cpu-007.png[title="Updated CPU and Memory", link=self,
 NOTE: You may notice that the amount of memory shown is actually less than 4GiB. This is because the VM image has kdump enabled, which reserves some memory for the kernel. If kdump were disabled, the total memory would be 4 GiB.
 
 [[add_disk]]
-==== Adding a Hotplug Disk to a Running VM
+=== Adding a Hotplug Disk to a Running VM
 
 In this exercise, we will hot add a new disk to an existing VM using the OpenShift console. You will start with an existing running VM that already has one or more disks configured, and add an additional one.
 
@@ -745,7 +757,7 @@ virt-launcher-hot-plug-vm1-8jlpw   2/2     Running     0          47m
 NOTE: While we are not going to do it in this lab, you are perfectly able to create a filesystem on this new disk, mount it, and use it as needed.
 
 [[remove_hotplug]]
-==== Remove a Hotplugged Disk
+=== Remove a Hotplugged Disk
 
 For this exercise we will remove the hot-plugged disk from the virtual machine.
 
@@ -778,7 +790,7 @@ NOTE: The detached disk still exists as a PVC. It can be re-attached, or attache
 image::exercise3/03-image-disk-015.png[title="Disk is removed in OS", link=self, window=blank, width=100%]
 
 [[nic]]
-==== Adding a NIC to a Running VM
+=== Adding a NIC to a Running VM
 
 In this exercise, we will add a new *Network Interface Card* (NIC) to an existing VM. You will start with an existing VM that has a single NIC on the pod network, and modify the configuration to include an additional NIC on a new network.
 
@@ -834,9 +846,9 @@ Congratulations, you have completed the Hot-Plug exercises!
 
 IMPORTANT: At the end of this module be sure to shut down the virtual machine *hot-plug-vm-1* that we were working with in order to conserve lab resources for future modules.
 
-=== Affinity
+== Affinity
 
-==== Introduction
+=== Introduction
 
 Affinity and Anti-affinity are a set of rules that allow us to select where a virtual machine can be placed by the Kubernetes scheduler when it is deployed. In many cases these rules are defined to ensure that two interdependent workloads are not placed on the same node through anti-affinity rules. Think of an application that may have two frontend web servers and a backend database server with traffic load balanced evenly to the web servers. You would not want both of those VMs placed on the same node. Should an issue happen with the host system, the entire virtual application would be affected. By setting both affinity and anti-affinity rules for the placement of VMs, we can ensure situations like this don't happen.
 
@@ -847,7 +859,7 @@ Affinity and Anti-affinity are a set of rules that allow us to select where a vi
 * Understand how pod anti-affinity rules can ensure that workloads are segregated to provide high availability and increase fault tolerance.
 
 [[node_affinity]]
-==== Node Affinity
+=== Node Affinity
 
 Node Affinity is a set of rules that guide the scheduler to attract a Virtual Machine to a specific node or group of nodes. These rules rely on matching labels that are applied to the nodes.
 
@@ -916,7 +928,7 @@ image::exercise4/04-restart-vm.png[title="Restart the VM", link=self, window=bla
 image::exercise4/04-vm-affinity-verified.png[title="VM Affinity Verified", link=self, window=blank, width=100%]
 
 [[pod_affinity]]
-==== Pod Affinity
+=== Pod Affinity
 
 Pod Affinity is a scheduling rule that co-locates a VMs (or pods) with specific labels onto the same node.
 
@@ -1162,7 +1174,7 @@ node-affinity-vm   19m    Running   10.233.0.77   worker-cluster-bj7mh-2   True
 . You will now see the *pod-affinity-vm* running on the same node *node-affinity-vm* because of the pod affinity rule pairing the two together.
 
 [[pod_antiaffinity]]
-==== Pod Anti-Affinity
+=== Pod Anti-Affinity
 
 Pod Anti-Affinity is a crucial feature in achieving cross-cluster High Availability (HA) for your workloads. It works by instructing the scheduler to prevent the co-location of related VMs on the same node.
 
@@ -1280,9 +1292,9 @@ Congratulations, you have completed the Affinity exercises!
 
 IMPORTANT: Stop the *node-affinity-vm*, *pod-affinity-vm*, and *pod-anti-affinity-vm* VMs from this module to ensure that there are enough resources to continue for the next module
 
-=== Descheduler
+== Descheduler
 
-==== Introduction
+=== Introduction
 
 In Kubernetes, on which OpenShift is based, the default behavior when a node starts to feel pressure from a lack of physical resources (CPU/Memory) is to kill running workloads to free up those resources. It does this by using the kube-descheduler to evict pods and have them rescheduled on other nodes with more free resources.
 
@@ -1534,9 +1546,9 @@ oc -n dynamic-schedule-stress-test scale deployment stress-test --replicas=0
 virtctl stop dynamic-schedule-vm-1 -n dynamic-schedule
 ----
 
-=== Fencing (Module 11)
+== Fencing
 
-==== Introduction
+=== Introduction
 
 Fencing is a vital mechanism that safeguards cluster resources and ensures data integrity. It works by isolating an unresponsive or failed node and evacuating all workloads in a timely manner. This process is crucial to prevent the "split-brain" scenario, which occurs when multiple nodes try to write to shared storage simultaneously, inevitably leading to data corruption.
 
@@ -1548,7 +1560,7 @@ This lab demonstrates the capabilities of the *Node Health Check Operator* and t
 * Understand how fencing a node works during a simulated failure scenario.
 
 [[conf_node_health]]
-==== Configuring Node Health Checks
+=== Configuring Node Health Checks
 
 For this next portion of our lab we need to exit the *Virtualization* perspective and return to the *Core platform* perspective.
 
@@ -1577,7 +1589,7 @@ image::exercise6/06-image-nodehealthcheck3.png[title="Create NodeHealthCheck", l
 . Once created you should be returned to the *NodeHealthCheck* page where it shows that the policy we just created is now enabled.
 
 [[failure_sim]]
-==== Simulating a Node Failure
+=== Simulating a Node Failure
 
 Now we are going to simulate a node failure and see how OpenShift Virtualization handles the situation.
 
@@ -1709,11 +1721,11 @@ Start with xref:05-live-migration.adoc[Live Migration] to begin learning core op
 
 == Summary
 
-The Core Operators section provides the operational foundations for managing OpenShift Virtualization at scale. These capabilities ensure:
+The Advance Operators section provides the operational foundations for managing OpenShift Virtualization at scale. These capabilities ensure:
 
 * **High Availability** — Automatic failure detection and recovery
 * **Optimal Utilization** — Dynamic resource management and scheduling
 * **Non-Disruptive Operations** — Live migration and hot-plugging
 * **Workload Control** — Affinity rules and placement strategies
 
-Mastery of these operators enables production-grade virtualization infrastructure.
+Mastery of these operators enables production-grade virtualization infrastructure.  Proceed to the multicluster module to explore advanced VM operations.
